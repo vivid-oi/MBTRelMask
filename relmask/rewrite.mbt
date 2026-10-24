@@ -131,5 +131,13 @@ pub fn Plan::transform(
     }
   }
   validate_rows(self, rows)
-  { encoded: encode_rows(self, rows), report: report(self, rows, changed), }
+  let encoded = encode_rows(self, rows)
+  if encoded.length() > self.max_input_units {
+    reject("output_too_large", "data")
+  }
+  {
+    encoded,
+    report: report(self, rows, changed),
+    fingerprint: self.fingerprint,
+  }
 }

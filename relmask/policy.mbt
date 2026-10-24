@@ -250,5 +250,10 @@ pub fn Plan::parse(source : String) -> Plan raise MaskError {
       }
     }
   }
-  { tables, max_rows, max_input_units, }
+  {
+    tables,
+    max_rows,
+    max_input_units,
+    fingerprint: hex(sha256(@utf8.encode(source[:]))),
+  }
 }

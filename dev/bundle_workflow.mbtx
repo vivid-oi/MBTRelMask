@@ -1,0 +1,61 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/shell",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn main {
+  let args = @env.args()
+  let target = if args.length() > 1 { args[1] } else { "wasm" }
+  let moon = if args.length() > 2 { args[2] } else { "moon" }
+  let directory = @fs.tmpdir(prefix="relmask-bundle-")
+  defer {
+    // Only this fresh directory and its direct files belong to the test.
+    for name in @fs.readdir(directory[:]) {
+      let path = directory + "/" + name
+      if name == "blocked" { @fs.rmdir(path[:]) } else { @fs.remove(path[:]) }
+    }
+    @fs.rmdir(directory[:])
+  }
+  let destination = directory + "/sample.bundle.json"
+  let prefix = ["run","--frozen","--target",target,"apps/relmask","--"]
+  let policy = "examples/chinook/policy.json"
+  let data = "examples/chinook/data.json"
+  let key = {"RELMASK_KEY":"public-example-key-never-use-for-private-data"}
+  let export_args = prefix + ["export",policy,data,destination]
+  let first = @shell.Cmd(moon,export_args,env=key).output()
+  first.check()
+  if first.stdout() != "" { fail("export leaked data to stdout") }
+  let stored = @fs.read_file(destination[:]).text()
+  let verified = @shell.Cmd(moon,prefix + ["verify",policy,destination],env={"RELMASK_KEY":""}).output()
+  verified.check()
+  if verified.stdout().trim() != first.stderr().trim() { fail("report did not round trip") }
+  guard @json.parse(stored) is {"data":String(encoded),..} else { fail("missing data") }
+  guard @json.parse(encoded) is {"Customer":Array(customers),"InvoiceLine":Array(lines),..} else { fail("missing real tables") }
+  if customers.length() != 59 || lines.length() != 2240 { fail("incomplete real export") }
+  let again = @shell.Cmd(moon,export_args,env=key).output()
+  if again.exit_code() != 1 || @fs.read_file(destination[:]).text() != stored { fail("existing destination was overwritten") }
+  let corrupt = directory + "/corrupt.json"
+  @fs.write_file(corrupt[:],stored.replace(old="relmask-bundle-1",new="relmask-bundle-2"))
+  let rejected = @shell.Cmd(moon,prefix + ["verify",policy,corrupt]).output()
+  if rejected.exit_code() != 1 || !rejected.stderr().contains("bundle_version") { fail("corrupt bundle accepted") }
+  let bad_data = directory + "/invalid.json"
+  @fs.write_file(bad_data[:],"{\"Customer\":[]}")
+  let absent = directory + "/absent.bundle.json"
+  let invalid = @shell.Cmd(moon,prefix + ["export",policy,bad_data,absent],env=key).output()
+  if invalid.exit_code() != 1 || @fs.exists(absent[:]) { fail("invalid input published partial output") }
+  let blocked = directory + "/blocked"
+  @fs.mkdir(blocked[:])
+  let blocked_run = @shell.Cmd(moon,prefix + ["export",policy,data,blocked],env=key).output()
+  if blocked_run.exit_code() != 1 || @fs.kind(blocked[:]) != Directory { fail("directory destination changed") }
+  for name in @fs.readdir(directory[:]) { if name.has_suffix(".pending") { fail("failed publication left a temporary file") } }
+  let recovered = @shell.Cmd(moon,prefix + ["export",policy,data,absent],env=key).output()
+  recovered.check()
+  if @fs.read_file(absent[:]).text() != stored { fail("non-deterministic output after recovery") }
+  @shell.Cmd(moon,prefix + ["verify",policy,absent]).run()
+  println("Bundle workflow: real export, secret-free verification, no-clobber, corruption, rename failure, cleanup and recovery checked")
+}

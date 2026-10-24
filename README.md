@@ -17,17 +17,25 @@ Linux / macOS：
 
 ```sh
 export RELMASK_KEY='public-example-key-never-use-for-private-data'
-moon run apps/relmask --target native -- mask examples/chinook/policy.json examples/chinook/data.json > masked.json
+moon run apps/relmask --target native -- export examples/chinook/policy.json examples/chinook/data.json sample.bundle.json
 ```
 
 PowerShell：
 
 ```powershell
 $env:RELMASK_KEY = 'public-example-key-never-use-for-private-data'
-moon run apps/relmask --target native -- mask examples/chinook/policy.json examples/chinook/data.json
+moon run apps/relmask --target native -- export examples/chinook/policy.json examples/chinook/data.json sample.bundle.json
 ```
 
-`mask` 在整个数据集验证成功后才向 stdout 写 JSON，检查摘要写入 stderr。退出码：0 成功、1 数据/策略/I/O 错误、2 用法错误。重定向由调用者负责，shell 可能在程序运行前就截断目标文件。
+`export` 将替换后的数据、无原值报告、策略指纹和完整性摘要写成一个文件。目标必须不存在；同目录私有临时文件写入、同步、关闭后再发布，普通失败会清理临时文件。已有文件不会被覆盖。
+
+接收方保留原策略文件，无需原数据和秘密即可复核：
+
+```sh
+moon run apps/relmask --target native -- verify examples/chinook/policy.json sample.bundle.json
+```
+
+需要纯数据时，`mask POLICY DATA` 在整个数据集验证成功后才向 stdout 写 JSON，报告写入 stderr。退出码：0 成功、1 数据/策略/I/O 错误、2 用法错误。`mask` 的 shell 重定向可能提前截断目标文件；持久导出推荐使用 `export`。
 
 Chinook 示例保留全部 11 张表，重编号关联整数 ID，替换客户/员工联系方式，保留金额和交易时间。原数据中的个人信息本来就是虚构样本。来源、固定版本和校验和见 [示例说明](examples/chinook/README.md)。
 
@@ -51,7 +59,7 @@ Chinook 示例保留全部 11 张表，重编号关联整数 ID，替换客户/�
 
 每列都要选择 `keep`、`null`、`replace`、`token` 或 `reindex`。相互引用的列必须使用相同规则；具体格式及错误语义见 [数据契约](docs/contract.md)。
 
-库入口为 `vivid-oi/relmask/relmask`，公开 API 只有 `Plan::parse`、`Plan::validate`、`Plan::transform` 及完成结果的 JSON/报告导出。[库示例](relmask/README.mbt.md)参与编译与测试。
+库入口为 `vivid-oi/relmask/relmask`：`Plan::parse`、`Plan::validate`、`Plan::transform`、`Plan::verify_bundle`；完成结果提供 `to_json`、`report_json`、`bundle_json`。[库示例](relmask/README.mbt.md)参与编译与测试。
 
 ## 当前边界
 
@@ -79,6 +87,8 @@ CI 在三个可移植后端运行核心测试，在 Linux、macOS、Windows 真�
 
 多租户场景见[复合引用示例](examples/tenants/README.md)。
 
-后续能力按实际使用需求推进：带完整报告的文件产物；之后再考虑 CSV 和跨批持久映射。它们尚未实现。
+三套采用流程见[使用场景](docs/workflows.md)，文件格式和失败恢复见[导出契约](docs/bundles.md)。完整性摘要没有秘密，不能认证发布者；修改策略空白或换行也会改变指纹。文件中的变更数量无法在缺少原数据时独立证明。
+
+后续按实际采用需求推进 CSV 导入、跨批持久映射；这两项尚未实现。
 
 Apache-2.0。外部资源及许可见 [THIRD_PARTY.md](THIRD_PARTY.md)。

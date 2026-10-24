@@ -12,5 +12,9 @@ test {
   let plan = @relmask.Plan::parse(source)
   let checked = plan.transform(data, "example-only-key-at-least-32-bytes")
   assert_eq(checked.to_json(), "{\"users\":[{\"id\":100}]}")
+  let bundle = checked.bundle_json()
+  let received = plan.verify_bundle(bundle)
+  assert_eq(received.to_json(), checked.to_json())
+  assert_eq(received.report_json(), checked.report_json())
 }
 ```

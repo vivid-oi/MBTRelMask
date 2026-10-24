@@ -71,6 +71,7 @@ pub struct Plan {
   priv tables : Array[TableSpec]
   priv max_rows : Int32
   priv max_input_units : Int32
+  priv fingerprint : String
 }
 
 ///|
@@ -79,6 +80,7 @@ pub struct Plan {
 pub struct CheckedDataset {
   priv encoded : String
   priv report : String
+  priv fingerprint : String
 }
 
 ///|

@@ -36,23 +36,39 @@ async fn execute() -> Unit {
   let args = @env.args()
   if args.length() == 2 && (args[1] == "--help" || args[1] == "help") {
     @stdio.stdout.write(
-      "relmask check POLICY DATA\nrelmask mask POLICY DATA\nmask reads RELMASK_KEY (at least 32 UTF-8 bytes); writes complete JSON to stdout.\n",
+      "relmask check POLICY DATA\nrelmask mask POLICY DATA\nrelmask export POLICY DATA DEST\nrelmask verify POLICY BUNDLE\nmask/export read RELMASK_KEY (at least 32 UTF-8 bytes). export refuses an existing DEST.\n",
     )
     return
   }
-  if args.length() != 4 || (args[1] != "check" && args[1] != "mask") {
-    @stdio.stderr.write("usage: relmask <check|mask> POLICY DATA\n")
+  if !((args.length() == 4 && ["check", "mask", "verify"].contains(args[1])) ||
+    (args.length() == 5 && args[1] == "export")) {
+    @stdio.stderr.write(
+      "usage: relmask <check|mask|verify> POLICY INPUT, or relmask export POLICY DATA DEST\n",
+    )
     exit_process(2)
     return
   }
   let policy = @engine.Plan::parse(read_text(args[2], 4_000_000L))
-  let input = read_text(args[3], 64_000_000L)
+  let input = read_text(
+    args[3],
+    if args[1] == "verify" {
+      128_000_000L
+    } else {
+      64_000_000L
+    },
+  )
   if args[1] == "check" {
     @stdio.stdout.write(policy.validate(input) + "\n")
+  } else if args[1] == "verify" {
+    @stdio.stdout.write(policy.verify_bundle(input).report_json() + "\n")
   } else {
     let key = @env.get_env_var("RELMASK_KEY").unwrap_or("")
     let output = policy.transform(input, key)
-    @stdio.stdout.write(output.to_json() + "\n")
+    if args[1] == "export" {
+      publish(args[4], output.bundle_json())
+    } else {
+      @stdio.stdout.write(output.to_json() + "\n")
+    }
     @stdio.stderr.write(output.report_json() + "\n")
   }
 }
@@ -66,7 +82,7 @@ async fn main {
     }
     _ => {
       @stdio.stderr.write(
-        "input_output_error: check paths, UTF-8 encoding and CLI byte budgets\n",
+        "input_output_error: check paths, permissions, UTF-8 and byte budgets; export requires a new destination\n",
       )
       exit_process(1)
     }

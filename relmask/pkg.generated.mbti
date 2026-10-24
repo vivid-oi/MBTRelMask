@@ -16,6 +16,7 @@ pub impl Show for MaskError
 pub struct CheckedDataset {
   // private fields
 }
+pub fn CheckedDataset::bundle_json(Self) -> String
 pub fn CheckedDataset::report_json(Self) -> String
 pub fn CheckedDataset::to_json(Self) -> String
 
@@ -25,6 +26,7 @@ pub struct Plan {
 pub fn Plan::parse(String) -> Self raise MaskError
 pub fn Plan::transform(Self, String, String) -> CheckedDataset raise MaskError
 pub fn Plan::validate(Self, String) -> String raise MaskError
+pub fn Plan::verify_bundle(Self, String) -> CheckedDataset raise MaskError
 
 // Type aliases
 
