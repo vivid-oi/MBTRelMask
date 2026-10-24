@@ -73,10 +73,11 @@ async fn main {
   let probe_load = @shell.Cmd(psql,["-X","-q","-v","ON_ERROR_STOP=1","-f",probe_sql]).output()
   if probe_load.exit_code() != 0 { fail("PostgreSQL probe failed: " + probe_load.stderr()) }
   owned_probe = true
-  let result = query(psql,"SELECT json_agg(t) FROM (SELECT id::text AS id,value::text AS value,label,flag FROM relmask_probe.probe ORDER BY id) t;")
-  guard @json.parse(result) is Array([{"id":String(low),"value":String(fraction),"label":Null,"flag":False,..},{"id":String(high),"value":String(big),"label":String(label),"flag":True,..}]) else { fail("PostgreSQL probe shape") }
+  // Qualify the BIGINT column: an unqualified id resolves to its TEXT alias.
+  let result = query(psql,"SELECT json_agg(t) FROM (SELECT id::text AS id,value::text AS value,label,flag FROM relmask_probe.probe ORDER BY probe.id) t;")
+  guard @json.parse(result) is Array([{"id":String(low),"value":String(fraction),"label":Null,"flag":False,..},{"id":"2","value":"2","label":"two","flag":True,..},{"id":"10","value":"10","label":"ten","flag":False,..},{"id":String(high),"value":String(big),"label":String(label),"flag":True,..}]) else { fail("PostgreSQL probe shape") }
   if low != "-9223372036854775808" || high != "9223372036854775807" || fraction != "0.12345678901234567890123456789" || big != "1" + Array::make(400,"0").join("") || label != "'; DROP SCHEMA public;--\r\n界\\end" { fail("PostgreSQL value preservation failed") }
-  if query(psql,"SELECT count(*) FROM relmask_probe.probe p JOIN relmask_probe.probe q ON p.parent=q.id;") != "2" { fail("cycle lost") }
+  if query(psql,"SELECT count(*) FROM relmask_probe.probe p JOIN relmask_probe.probe q ON p.parent=q.id;") != "4" { fail("cycle lost") }
   let unique_failure = @shell.Cmd(psql,["-X","-q","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose","-c","INSERT INTO relmask_probe.probe VALUES (1,1,NULL,true,9223372036854775807);"]).output()
   if unique_failure.exit_code() == 0 || !unique_failure.stderr().contains("23505") { fail("NULLS NOT DISTINCT not enforced") }
   let fk_failure = @shell.Cmd(psql,["-X","-q","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose","-c","INSERT INTO relmask_probe.probe VALUES (1,1,'new',true,123);"]).output()

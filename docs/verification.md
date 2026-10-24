@@ -6,6 +6,8 @@
 
 SQL 单元测试另覆盖确定性、数字范围两端/越界/巨大指数、负零、NUL、标识符 UTF-8 字节上限、输出预算、MATCH FULL 和失败后恢复。CLI 工作流验证完整文件发布、目标不覆盖、生成失败不留文件。数据库测试命令和环境要求见 [SQL 导出](sql.md)。CI 增加独立 PostgreSQL 18 服务任务；实际远端状态以该提交 Checks 为准。
 
+38bfd20 的首次远端运行中，六项原有目标任务通过，数据库任务在探针顺序断言失败。检查发现验证查询的 ORDER BY id 指向 SELECT 的 TEXT 别名；这是 PostgreSQL 的输出列优先解析规则。修复为 ORDER BY probe.id，明确使用 BIGINT。增加 2、10 两条记录后，本机 PostgreSQL 18.6 ICU en-US 实例能复现旧查询失败；修复查询随后通过同一工作流。参考：[PostgreSQL ORDER BY](https://www.postgresql.org/docs/18/queries-order.html)。
+
 2026-10-24 至 2026-10-25，Windows x86-64：
 
 - 官方稳定版 `moon 0.1.20261023 (3778465)`、`moonc v0.10.17+d971670cd`、`moonrun 0.1.20261023`。
