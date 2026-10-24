@@ -19,12 +19,17 @@ fn domains(plan : Plan) -> (Array[Int32], Array[Int32]) {
   for ti, table in plan.tables {
     for reference in table.references {
       let pi = table_index(plan.tables, reference.target).unwrap()
-      let ci = column_index(table, reference.columns[0]).unwrap()
-      let pci = column_index(plan.tables[pi], reference.target_columns[0]).unwrap()
-      let a = root_of(parents, offsets[ti] + ci)
-      let b = root_of(parents, offsets[pi] + pci)
-      parents[a] = if a < b { a } else { b }
-      parents[b] = if a < b { a } else { b }
+      for position, name in reference.columns {
+        let ci = column_index(table, name).unwrap()
+        let pci = column_index(
+          plan.tables[pi],
+          reference.target_columns[position],
+        ).unwrap()
+        let a = root_of(parents, offsets[ti] + ci)
+        let b = root_of(parents, offsets[pi] + pci)
+        parents[a] = if a < b { a } else { b }
+        parents[b] = if a < b { a } else { b }
+      }
     }
   }
   (parents, offsets)

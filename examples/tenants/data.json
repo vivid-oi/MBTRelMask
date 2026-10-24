@@ -1,0 +1,12 @@
+{
+  "accounts": [
+    {"tenant":"north","account":7},
+    {"tenant":"south","account":7},
+    {"tenant":"north","account":8}
+  ],
+  "events": [
+    {"id":1,"tenant":"north","account":7,"kind":"login"},
+    {"id":2,"tenant":"south","account":7,"kind":"password_reset"},
+    {"id":3,"tenant":null,"account":999,"kind":"unassigned"}
+  ]
+}

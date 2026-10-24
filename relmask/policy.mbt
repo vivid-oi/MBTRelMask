@@ -187,8 +187,8 @@ pub fn Plan::parse(source : String) -> Plan raise MaskError {
           only_keys(refobj, ["columns", "table", "target"], loc)
           let columns = names(required(refobj, "columns", loc), loc)
           let target_columns = names(required(refobj, "target", loc), loc)
-          if columns.length() != 1 || target_columns.length() != 1 {
-            reject("composite_reference_unsupported", loc)
+          if columns.is_empty() || columns.length() != target_columns.length() {
+            reject("reference_arity", loc)
           }
           {
             columns,
@@ -232,16 +232,21 @@ pub fn Plan::parse(source : String) -> Plan raise MaskError {
         !parent.unique.contains(reference.target_columns) {
         reject("reference_not_unique", loc)
       }
-      let a = table.columns[column_index(table, reference.columns[0]).unwrap()]
-      let b = parent.columns[column_index(parent, reference.target_columns[0]).unwrap()]
-      if !(match (a.kind, b.kind) {
-          (Text, Text) | (Integer, Integer) | (Boolean, Boolean) => true
-          _ => false
-        }) {
-        reject("reference_type_mismatch", loc)
-      }
-      if !same_rule(a.rule, b.rule) {
-        reject("reference_rule_mismatch", loc)
+      for position, name in reference.columns {
+        let a = table.columns[column_index(table, name).unwrap()]
+        let b = parent.columns[column_index(
+            parent,
+            reference.target_columns[position],
+          ).unwrap()]
+        if !(match (a.kind, b.kind) {
+            (Text, Text) | (Integer, Integer) | (Boolean, Boolean) => true
+            _ => false
+          }) {
+          reject("reference_type_mismatch", loc)
+        }
+        if !same_rule(a.rule, b.rule) {
+          reject("reference_rule_mismatch", loc)
+        }
       }
     }
   }
