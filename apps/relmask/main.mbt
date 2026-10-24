@@ -36,14 +36,15 @@ async fn execute() -> Unit {
   let args = @env.args()
   if args.length() == 2 && (args[1] == "--help" || args[1] == "help") {
     @stdio.stdout.write(
-      "relmask check POLICY DATA\nrelmask mask POLICY DATA\nrelmask export POLICY DATA DEST\nrelmask verify POLICY BUNDLE\nmask/export read RELMASK_KEY (at least 32 UTF-8 bytes). export refuses an existing DEST.\n",
+      "relmask check POLICY DATA\nrelmask mask POLICY DATA\nrelmask export POLICY DATA DEST\nrelmask export-subset POLICY DATA SEEDS DEST\nrelmask verify POLICY BUNDLE\nmask/export/export-subset read RELMASK_KEY (at least 32 UTF-8 bytes). Exports require a new destination.\n",
     )
     return
   }
   if !((args.length() == 4 && ["check", "mask", "verify"].contains(args[1])) ||
-    (args.length() == 5 && args[1] == "export")) {
+    (args.length() == 5 && args[1] == "export") ||
+    (args.length() == 6 && args[1] == "export-subset")) {
     @stdio.stderr.write(
-      "usage: relmask <check|mask|verify> POLICY INPUT, or relmask export POLICY DATA DEST\n",
+      "usage: relmask <check|mask|verify> POLICY INPUT, relmask export POLICY DATA DEST, or relmask export-subset POLICY DATA SEEDS DEST\n",
     )
     exit_process(2)
     return
@@ -63,9 +64,17 @@ async fn execute() -> Unit {
     @stdio.stdout.write(policy.verify_bundle(input).report_json() + "\n")
   } else {
     let key = @env.get_env_var("RELMASK_KEY").unwrap_or("")
-    let output = policy.transform(input, key)
-    if args[1] == "export" {
-      publish(args[4], output.bundle_json())
+    let data = if args[1] == "export-subset" {
+      policy.subset(input, read_text(args[4], 4_000_000L))
+    } else {
+      input
+    }
+    let output = policy.transform(data, key)
+    if args[1] == "export" || args[1] == "export-subset" {
+      publish(
+        args[if args[1] == "export" { 4 } else { 5 }],
+        output.bundle_json(),
+      )
     } else {
       @stdio.stdout.write(output.to_json() + "\n")
     }

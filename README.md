@@ -59,7 +59,7 @@ Chinook 示例保留全部 11 张表，重编号关联整数 ID，替换客户/�
 
 每列都要选择 `keep`、`null`、`replace`、`token` 或 `reindex`。相互引用的列必须使用相同规则；具体格式及错误语义见 [数据契约](docs/contract.md)。
 
-库入口为 `vivid-oi/relmask/relmask`：`Plan::parse`、`Plan::validate`、`Plan::transform`、`Plan::verify_bundle`；完成结果提供 `to_json`、`report_json`、`bundle_json`。[库示例](relmask/README.mbt.md)参与编译与测试。
+库入口为 `vivid-oi/relmask/relmask`：`Plan::parse`、`Plan::validate`、`Plan::subset`、`Plan::transform`、`Plan::verify_bundle`；完成结果提供 `to_json`、`report_json`、`bundle_json`。[库示例](relmask/README.mbt.md)参与编译与测试。
 
 ## 当前边界
 
@@ -86,6 +86,8 @@ moon run dev/verify.mbtx -- native
 CI 在三个可移植后端运行核心测试，在 Linux、macOS、Windows 真正运行 Native 命令和 Chinook 工作流。
 
 多租户场景见[复合引用示例](examples/tenants/README.md)。
+
+需要缩小故障样本时，`Plan::subset` 和 `export-subset POLICY DATA SEEDS DEST` 会保留指定记录及递归父依赖，然后可以继续替换和复核。见[关系裁剪](docs/subsets.md)。
 
 三套采用流程见[使用场景](docs/workflows.md)，文件格式和失败恢复见[导出契约](docs/bundles.md)。完整性摘要没有秘密，不能认证发布者；修改策略空白或换行也会改变指纹。文件中的变更数量无法在缺少原数据时独立证明。
 

@@ -1,0 +1,42 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/shell",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn main {
+  let args = @env.args()
+  let target = if args.length() > 1 { args[1] } else { "wasm" }
+  let moon = if args.length() > 2 { args[2] } else { "moon" }
+  let directory = @fs.tmpdir(prefix="relmask-subset-")
+  defer {
+    for name in @fs.readdir(directory[:]) { let path = directory + "/" + name; @fs.remove(path[:]) }
+    @fs.rmdir(directory[:])
+  }
+  let destination = directory + "/subset.json"
+  let prefix = ["run","--frozen","--target",target,"apps/relmask","--"]
+  let policy = "examples/chinook/policy.json"
+  let command = prefix + ["export-subset",policy,"examples/chinook/data.json","examples/chinook/seeds.json",destination]
+  let key = {"RELMASK_KEY":"public-example-key-never-use-for-private-data"}
+  let run = @shell.Cmd(moon,command,env=key).output()
+  run.check()
+  guard @json.parse(@fs.read_file(destination[:]).text()) is {"data":String(encoded),..} else { fail("missing data") }
+  guard @json.parse(encoded,preserve_number_repr=true) is Object(tables) else { fail("shape") }
+  let mut count = 0
+  for name, table in tables {
+    guard table is Array(rows) else { fail("table shape") }
+    count += rows.length()
+    if ["InvoiceLine","Invoice","Customer","Track","Album","Artist","Genre","MediaType"].contains(name) && rows.length() != 1 { fail("incorrect ancestor closure") }
+    if ["Playlist","PlaylistTrack"].contains(name) && !rows.is_empty() { fail("included unrelated descendants") }
+  }
+  if count >= 20 { fail("subset unexpectedly expanded") }
+  @shell.Cmd(moon,prefix + ["verify",policy,destination],env={"RELMASK_KEY":""}).run()
+  let before = @fs.read_file(destination[:]).text()
+  let again = @shell.Cmd(moon,command,env=key).output()
+  if again.exit_code() != 1 || @fs.read_file(destination[:]).text() != before { fail("subset overwrote existing output") }
+  println("Chinook subset workflow: 15607 source rows -> " + count.to_string() + " dependency-closed rows; masking and bundle verification passed")
+}
