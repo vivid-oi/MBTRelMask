@@ -35,6 +35,9 @@ async fn read_text(path : String, maximum : Int64) -> String {
 async fn execute() -> Unit {
   let args = @env.args()
   if args.length() == 2 && (args[1] == "--help" || args[1] == "help") {
+    @stdio.stdout.write(
+      "relmask export-merged POLICY LEFT_DATA RIGHT_DATA DEST\n",
+    )
     @stdio.stdout.write("relmask unpack-sql POLICY BUNDLE DEST [SCHEMA]\n")
     @stdio.stdout.write("relmask diagnose POLICY DATA\n")
     @stdio.stdout.write(
@@ -63,7 +66,9 @@ async fn execute() -> Unit {
     ) ||
     (
       args.length() == 6 &&
-      ["export-subset", "export-state", "unpack-sql"].contains(args[1])
+      ["export-subset", "export-state", "unpack-sql", "export-merged"].contains(
+        args[1],
+      )
     ) ||
     (args.length() == 7 && args[1] == "export-aggregate")) {
     @stdio.stderr.write(
@@ -91,7 +96,21 @@ async fn execute() -> Unit {
       64_000_000L
     },
   )
-  if args[1] == "diagnose" {
+  if args[1] == "export-merged" {
+    let merged = policy.merge_datasets(input, read_text(args[4], 64_000_000L))
+    let checked = policy.transform(
+      merged.to_json(),
+      @env.get_env_var("RELMASK_KEY").unwrap_or(""),
+    )
+    publish(args[5], checked.bundle_json())
+    @stdio.stderr.write(
+      "{\"merge\":" +
+      merged.report_json() +
+      ",\"transform\":" +
+      checked.report_json() +
+      "}\n",
+    )
+  } else if args[1] == "diagnose" {
     let result = policy.diagnose(input)
     @stdio.stdout.write(result.to_json() + "\n")
     if !result.is_valid() {

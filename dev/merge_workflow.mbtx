@@ -1,0 +1,62 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/shell",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn main {
+  let args = @env.args()
+  let target = if args.length() > 1 { args[1] } else { "wasm" }
+  let moon = if args.length() > 2 { args[2] } else { "moon" }
+  let directory = @fs.tmpdir(prefix="relmask-merge-")
+  defer {
+    for name in @fs.readdir(directory[:]) { let path = directory + "/" + name; @fs.remove(path[:]) }
+    @fs.rmdir(directory[:])
+  }
+  let policy = "examples/chinook/policy.json"
+  let source = "examples/chinook/data.json"
+  let raw = @fs.read_file(source).text()
+  guard @json.parse(raw,preserve_number_repr=true) is Object(root) &&
+    root.get("Artist") is Some(Array(artists)) else { fail("Chinook shape") }
+  artists.push({"ArtistId":1000000,"Name":"Public merge workflow artist"})
+  root["Artist"] = Json::array(artists)
+  let right = directory + "/right.json"
+  @fs.write_file(right[:],Json::object(root).stringify())
+  let bundle = directory + "/merged.bundle.json"
+  let expected = directory + "/expected.bundle.json"
+  let prefix = ["run","--frozen","--target",target,"apps/relmask","--"]
+  let key = {"RELMASK_KEY":"public-example-key-never-use-for-private-data"}
+  let command = prefix + ["export-merged",policy,source,right,bundle]
+  let run = @shell.Cmd(moon,command,env=key).output(max_output_bytes=4_000_000)
+  run.check()
+  guard @json.parse(run.stderr()) is {"merge":{"tables":Array(tables),..},..} else { fail("merge report") }
+  let mut reused = 0
+  let mut added = 0
+  for row in tables {
+    guard row is {"reused":Number(n,..),"added":Number(a,..),..} else { fail("report counts") }
+    reused += n.to_int()
+    added += a.to_int()
+  }
+  if reused != 15607 || added != 1 || run.stderr().contains("Public merge workflow artist") { fail("merge counts or value leakage") }
+  @shell.Cmd(moon,prefix+["export",policy,right,expected],env=key,stderr=Discard).run()
+  @shell.Cmd(moon,prefix+["compare",policy,bundle,expected],stdout=Discard).run()
+  @shell.Cmd(moon,prefix+["verify",policy,bundle],stdout=Discard).run()
+  let saved = @fs.read_file(bundle[:]).text()
+  let again = @shell.Cmd(moon,command,env=key).output()
+  if again.exit_code() != 1 || @fs.read_file(bundle[:]).text() != saved { fail("merge destination overwritten") }
+  guard artists[0] is Object(first) else { fail("artist") }
+  first["Name"] = Json::string("Public conflicting artist")
+  artists[0] = Json::object(first)
+  root["Artist"] = Json::array(artists)
+  @fs.write_file(right[:],Json::object(root).stringify())
+  let absent = directory + "/absent.bundle.json"
+  let bad = @shell.Cmd(moon,prefix+["export-merged",policy,source,right,absent],env=key).output()
+  if bad.exit_code() != 1 || !bad.stderr().contains("merge_row_conflict") || bad.stderr().contains("Public conflicting artist") || @fs.exists(absent[:]) { fail("conflict publication or leakage") }
+  @shell.Cmd(moon,prefix+["export-merged",policy,source,source,absent],env=key,stderr=Discard).run()
+  @shell.Cmd(moon,prefix+["verify",policy,absent],stdout=Discard).run()
+  println("Merge workflow: 15607 shared Chinook rows reused, one Artist added; shared mappings, no-clobber, conflict refusal and recovery checked")
+}

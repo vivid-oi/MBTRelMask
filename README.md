@@ -106,4 +106,6 @@ CI 在三个可移植后端运行核心测试，在 Linux、macOS、Windows 真�
 
 检查样本回归时，`compare POLICY BEFORE_BUNDLE AFTER_BUNDLE` 按完整主键匹配，输出不含数据值的新增/删除/字段变化计数；相同退出 0，变化退出 3。库提供 `compare_datasets`。见[比较契约](docs/comparison.md)。
 
+同一数据源的两个有效导出可用 `export-merged POLICY LEFT_DATA RIGHT_DATA DEST` 先合并、再统一转换：复用完全相同的共享记录，同主键内容冲突则拒绝。库提供 `merge_datasets` 及不含原值的合并报告。输入须属于相同主键命名空间，详见[样本合并](docs/merging.md)。
+
 Apache-2.0。外部资源及许可见 [THIRD_PARTY.md](THIRD_PARTY.md)。

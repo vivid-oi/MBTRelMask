@@ -38,6 +38,12 @@ pub struct MappedDataset {
 pub fn MappedDataset::dataset(Self) -> CheckedDataset
 pub fn MappedDataset::state_json(Self) -> String
 
+pub struct MergedDataset {
+  // private fields
+}
+pub fn MergedDataset::report_json(Self) -> String
+pub fn MergedDataset::to_json(Self) -> String
+
 pub struct Plan {
   // private fields
 }
@@ -46,6 +52,7 @@ pub fn Plan::diagnose(Self, String, max_issues? : Int32) -> Diagnostics raise Ma
 pub fn Plan::export_csv(Self, String) -> Map[String, String] raise MaskError
 pub fn Plan::export_sql(Self, String, schema? : String, max_output_units? : Int32) -> String raise MaskError
 pub fn Plan::import_csv(Self, Map[String, String]) -> String raise MaskError
+pub fn Plan::merge_datasets(Self, String, String) -> MergedDataset raise MaskError
 pub fn Plan::parse(String) -> Self raise MaskError
 pub fn Plan::subset(Self, String, String, options? : String) -> String raise MaskError
 pub fn Plan::transform(Self, String, String) -> CheckedDataset raise MaskError
