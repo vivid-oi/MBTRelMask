@@ -55,6 +55,7 @@ pub fn Plan::import_csv(Self, Map[String, String]) -> String raise MaskError
 pub fn Plan::merge_datasets(Self, String, String) -> MergedDataset raise MaskError
 pub fn Plan::parse(String) -> Self raise MaskError
 pub fn Plan::subset(Self, String, String, options? : String) -> String raise MaskError
+pub fn Plan::subset_where(Self, String, String, options? : String) -> String raise MaskError
 pub fn Plan::transform(Self, String, String) -> CheckedDataset raise MaskError
 pub fn Plan::transform_with_state(Self, String, String, previous? : String, max_entries? : Int32) -> MappedDataset raise MaskError
 pub fn Plan::validate(Self, String) -> String raise MaskError

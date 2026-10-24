@@ -15,3 +15,5 @@
 演示修改 ID 与引用、客户/员工联系信息、账单地址；保留交易时间、金额、曲目和数量。它展示关系与保真性，不代表这些保留字段在所有真实场景中都不敏感。
 
 `moon run dev/verify.mbtx -- native` 真正调用 CLI，逐表比较行/列数量、金额和时间，并独立遍历客户→发票→明细引用。
+
+select-2022.json 与 select-options.json 是本仓库编写的条件/关系配置，选择 2022 年的 83 张发票、455 条明细及父依赖。运行方法见[条件选样](../../docs/selection.md)，自动验证为 dev/selection_workflow.mbtx；不改动上游 data.json。

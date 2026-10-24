@@ -25,6 +25,22 @@ pub fn Plan::subset(
 ) -> String raise MaskError {
   let rows = load(self, source)
   validate_rows(self, rows)
+  self.subset_rows(rows, Keys(seeds), options)
+}
+
+///|
+priv enum RowSelection {
+  Keys(String)
+  Indexes(Array[Array[Int32]])
+}
+
+///|
+fn Plan::subset_rows(
+  self : Plan,
+  rows : Rows,
+  selection : RowSelection,
+  options : String?,
+) -> String raise MaskError {
   if options is Some(value) && value.length() > 1_000_000 {
     reject("subset_options_too_large", "subset.options")
   }
@@ -90,10 +106,15 @@ pub fn Plan::subset(
     let reference = self.tables[ci].references[fi]
     incoming[table_index(self.tables, reference.target).unwrap()].push((ci, fi))
   }
-  if seeds.length() > 1_000_000 {
-    reject("seeds_too_large", "seeds")
+  let seed_tables = match selection {
+    Keys(seeds) => {
+      if seeds.length() > 1_000_000 {
+        reject("seeds_too_large", "seeds")
+      }
+      fields(parse_json(seeds, "seeds"), "seeds")
+    }
+    Indexes(_) => Map([])
   }
-  let seed_tables = fields(parse_json(seeds, "seeds"), "seeds")
   only_keys(seed_tables, self.tables.map(t => t.name), "seeds")
   let selected : Array[Map[Int32, Bool]] = self.tables.map(_ => Map([]))
   let queue : Array[(Int32, Int32)] = []
@@ -126,6 +147,13 @@ pub fn Plan::subset(
       }
       guard index.get(key) is Some(ri) else { reject("seed_not_found", loc) }
       enqueue(ti, ri)
+    }
+  }
+  if selection is Indexes(indexes) {
+    for ti, indices in indexes {
+      for ri in indices {
+        enqueue(ti, ri)
+      }
     }
   }
   // Build each needed unique-key index once. Iterative closure handles cycles

@@ -1,0 +1,84 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/shell",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn main {
+  let args = @env.args()
+  let target = if args.length() > 1 { args[1] } else { "wasm" }
+  let moon = if args.length() > 2 { args[2] } else { "moon" }
+  let directory = @fs.tmpdir(prefix="relmask-selection-")
+  defer {
+    for name in @fs.readdir(directory[:]) { let path = directory + "/" + name; @fs.remove(path[:]) }
+    @fs.rmdir(directory[:])
+  }
+  let policy = "examples/chinook/policy.json"
+  let source = "examples/chinook/data.json"
+  let selector = "examples/chinook/select-2022.json"
+  let options = "examples/chinook/select-options.json"
+  let prefix = ["run","--frozen","--target",target,"apps/relmask","--"]
+  let key = {"RELMASK_KEY":"public-example-key-never-use-for-private-data"}
+  let bundle = directory + "/year.bundle.json"
+  let command = prefix + ["export-selected",policy,source,selector,bundle,options]
+  let initial = @shell.Cmd(moon,command,env=key).output()
+  if initial.exit_code()!=0 { fail("selection command failed: " + initial.stderr()) }
+  @shell.Cmd(moon,prefix+["verify",policy,bundle],stdout=Discard).run()
+  guard @json.parse(@fs.read_file(source).text(),preserve_number_repr=true) is {
+    "Invoice":Array(invoices),"InvoiceLine":Array(lines),..
+  } else { fail("Chinook source shape") }
+  let expected : Array[Json] = []
+  let ids : Map[String,Bool] = Map([])
+  for row in invoices {
+    guard row is {"InvoiceId":id,"InvoiceDate":String(date),..} else { fail("Invoice shape") }
+    // Independent fixture expectation uses its year prefix, not predicate code.
+    if date.has_prefix("2022-") { expected.push(row); ids[id.stringify()]=true }
+  }
+  let expected_lines = lines.filter(row => {
+    guard row is {"InvoiceId":id,..} else { abort("InvoiceLine shape") }
+    ids.contains(id.stringify())
+  })
+  guard @json.parse(@fs.read_file(bundle[:]).text()) is {"data":String(data),..} else { fail("bundle shape") }
+  guard @json.parse(data,preserve_number_repr=true) is {
+    "Invoice":Array(actual),"InvoiceLine":Array(details),..
+  } else { fail("selected shape") }
+  if expected.is_empty() || actual.length()!=expected.length() || details.length()!=expected_lines.length() { fail("selection counts: invoices " + actual.length().to_string() + "/" + expected.length().to_string() + ", lines " + details.length().to_string() + "/" + expected_lines.length().to_string()) }
+  let mapped_ids : Map[String,Bool] = Map([])
+  for i,row in actual {
+    guard row is Object(a) && expected[i] is Object(b) else { fail("Invoice row shape") }
+    for field in ["InvoiceDate","Total"] {
+      if a[field].stringify()!=b[field].stringify() { fail("Invoice business value changed") }
+    }
+    mapped_ids[a["InvoiceId"].stringify()] = true
+  }
+  for i,row in details {
+    guard row is Object(a) && expected_lines[i] is Object(b) else { fail("InvoiceLine row shape") }
+    if !mapped_ids.contains(a["InvoiceId"].stringify()) { fail("dangling selected reference") }
+    for field in ["UnitPrice","Quantity"] {
+      if a[field].stringify()!=b[field].stringify() { fail("InvoiceLine business value changed") }
+    }
+  }
+  let saved = @fs.read_file(bundle[:]).text()
+  let again = @shell.Cmd(moon,command,env=key).output()
+  if again.exit_code()!=1 || @fs.read_file(bundle[:]).text()!=saved { fail("selection overwrote target") }
+  let parents = directory + "/parents.bundle.json"
+  @shell.Cmd(moon,prefix+["export-selected",policy,source,selector,parents],env=key,stderr=Discard).run()
+  guard @json.parse(@fs.read_file(parents[:]).text()) is {"data":String(parent_data),..} &&
+    @json.parse(parent_data) is {"InvoiceLine":Array([]),..} else { fail("unexpected descendants by default") }
+  let temporary_selector = directory + "/selector.json"
+  let absent = directory + "/recovered.bundle.json"
+  @fs.write_file(temporary_selector[:],"{\"Invoice\":[{\"InvoiceDate\":{\"regex\":\"sensitive-filter\"}}]}")
+  let bad = @shell.Cmd(moon,prefix+["export-selected",policy,source,temporary_selector,absent],env=key).output()
+  if bad.exit_code()!=1 || !bad.stderr().contains("unknown_option") || bad.stderr().contains("sensitive-filter") || @fs.exists(absent[:]) { fail("unsafe selector publication or leakage") }
+  @fs.write_file(temporary_selector[:],"{\"Invoice\":[{\"InvoiceDate\":{\"prefix\":\"1900-\"}}]}")
+  @shell.Cmd(moon,prefix+["export-selected",policy,source,temporary_selector,absent],env=key,stderr=Discard).run()
+  guard @json.parse(@fs.read_file(absent[:]).text()) is {"data":String(empty),..} &&
+    @json.parse(empty) is Object(tables) else { fail("empty selection shape") }
+  for _,table in tables { guard table is Array([]) else { fail("unexpected nonempty selection") } }
+  @shell.Cmd(moon,prefix+["verify",policy,absent],stdout=Discard).run()
+  println("Selection workflow: " + actual.length().to_string() + " invoices from 2022 and " + details.length().to_string() + " complete line items; business values, parent closure, default scope, no-clobber and recovery checked")
+}

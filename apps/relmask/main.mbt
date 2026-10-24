@@ -36,6 +36,9 @@ async fn execute() -> Unit {
   let args = @env.args()
   if args.length() == 2 && (args[1] == "--help" || args[1] == "help") {
     @stdio.stdout.write(
+      "relmask export-selected POLICY DATA SELECTOR DEST [OPTIONS]\n",
+    )
+    @stdio.stdout.write(
       "relmask export-merged POLICY LEFT_DATA RIGHT_DATA DEST\n",
     )
     @stdio.stdout.write("relmask unpack-sql POLICY BUNDLE DEST [SCHEMA]\n")
@@ -66,11 +69,14 @@ async fn execute() -> Unit {
     ) ||
     (
       args.length() == 6 &&
-      ["export-subset", "export-state", "unpack-sql", "export-merged"].contains(
-        args[1],
-      )
+      [
+        "export-subset", "export-state", "unpack-sql", "export-merged", "export-selected",
+      ].contains(args[1])
     ) ||
-    (args.length() == 7 && args[1] == "export-aggregate")) {
+    (
+      args.length() == 7 &&
+      ["export-aggregate", "export-selected"].contains(args[1])
+    )) {
     @stdio.stderr.write(
       "invalid arguments: run relmask --help for command forms\n",
     )
@@ -96,7 +102,24 @@ async fn execute() -> Unit {
       64_000_000L
     },
   )
-  if args[1] == "export-merged" {
+  if args[1] == "export-selected" {
+    let selector = read_text(args[4], 4_000_000L)
+    let selected = if args.length() == 7 {
+      policy.subset_where(
+        input,
+        selector,
+        options=read_text(args[6], 1_000_000L),
+      )
+    } else {
+      policy.subset_where(input, selector)
+    }
+    let checked = policy.transform(
+      selected,
+      @env.get_env_var("RELMASK_KEY").unwrap_or(""),
+    )
+    publish(args[5], checked.bundle_json())
+    @stdio.stderr.write(checked.report_json() + "\n")
+  } else if args[1] == "export-merged" {
     let merged = policy.merge_datasets(input, read_text(args[4], 64_000_000L))
     let checked = policy.transform(
       merged.to_json(),

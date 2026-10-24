@@ -19,6 +19,10 @@ test {
   assert_eq(received.report_json(), checked.report_json())
   let selected = plan.subset(data, "{\"users\":[{\"id\":7}]}")
   assert_eq(selected, data)
+  let selected_where = plan.subset_where(
+    data, "{\"users\":[{\"id\":{\"gte\":7,\"lt\":8}}]}",
+  )
+  assert_eq(selected_where, selected)
   let merged = plan.merge_datasets(data, selected)
   assert_eq(merged.to_json(), data)
   assert_true(merged.report_json().contains("\"reused\":1"))
