@@ -39,4 +39,11 @@ async fn main {
   let again = @shell.Cmd(moon,command,env=key).output()
   if again.exit_code() != 1 || @fs.read_file(destination[:]).text() != before { fail("subset overwrote existing output") }
   println("Chinook subset workflow: 15607 source rows -> " + count.to_string() + " dependency-closed rows; masking and bundle verification passed")
+  let aggregate = directory + "/aggregate.json"
+  @shell.Cmd(moon,prefix + ["export-aggregate",policy,"examples/chinook/data.json","examples/chinook/seeds.json","examples/chinook/aggregate.json",aggregate],env=key,stderr=Discard).run()
+  guard @json.parse(@fs.read_file(aggregate[:]).text()) is {"data":String(data),..} else { fail("aggregate bundle") }
+  guard @json.parse(data) is {"InvoiceLine":Array(details),..} else { fail("aggregate rows") }
+  if details.length() != 2 { fail("invoice lost sibling lines") }
+  @shell.Cmd(moon,prefix + ["verify",policy,aggregate],stdout=Discard).run()
+  println("Aggregate workflow: invoice sibling lines included and verified")
 }

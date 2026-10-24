@@ -26,7 +26,7 @@ pub struct Plan {
 pub fn Plan::export_csv(Self, String) -> Map[String, String] raise MaskError
 pub fn Plan::import_csv(Self, Map[String, String]) -> String raise MaskError
 pub fn Plan::parse(String) -> Self raise MaskError
-pub fn Plan::subset(Self, String, String) -> String raise MaskError
+pub fn Plan::subset(Self, String, String, options? : String) -> String raise MaskError
 pub fn Plan::transform(Self, String, String) -> CheckedDataset raise MaskError
 pub fn Plan::validate(Self, String) -> String raise MaskError
 pub fn Plan::verify_bundle(Self, String) -> CheckedDataset raise MaskError

@@ -89,6 +89,8 @@ CI 在三个可移植后端运行核心测试，在 Linux、macOS、Windows 真�
 
 需要缩小故障样本时，`Plan::subset` 和 `export-subset POLICY DATA SEEDS DEST` 会保留指定记录及递归父依赖，然后可以继续替换和复核。见[关系裁剪](docs/subsets.md)。
 
+需要保留完整订单/发票时，可用 `export-aggregate POLICY DATA SEEDS OPTIONS DEST` 指定反向扩张的子表和总行数上限；超限拒绝，不截断。
+
 已有 CSV 导出时，`export-csv POLICY DIRECTORY DEST` 按目录清单读取全部表，验证关系并替换后生成 bundle；`unpack-csv POLICY BUNDLE DESTDIR` 复核后输出 CSV 文件和清单。保留精确数字、null 和空文本，支持多行字段。见 [CSV 契约与示例](docs/csv.md)。
 
 三套采用流程见[使用场景](docs/workflows.md)，文件格式和失败恢复见[导出契约](docs/bundles.md)。完整性摘要没有秘密，不能认证发布者；修改策略空白或换行也会改变指纹。文件中的变更数量无法在缺少原数据时独立证明。

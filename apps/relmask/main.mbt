@@ -36,6 +36,9 @@ async fn execute() -> Unit {
   let args = @env.args()
   if args.length() == 2 && (args[1] == "--help" || args[1] == "help") {
     @stdio.stdout.write(
+      "relmask export-aggregate POLICY DATA SEEDS OPTIONS DEST\n",
+    )
+    @stdio.stdout.write(
       "relmask check POLICY DATA\nrelmask mask POLICY DATA\nrelmask export POLICY DATA DEST\nrelmask export-subset POLICY DATA SEEDS DEST\nrelmask export-csv POLICY DIRECTORY DEST\nrelmask unpack-csv POLICY BUNDLE DESTDIR\nrelmask verify POLICY BUNDLE\nmask and export commands read RELMASK_KEY (at least 32 UTF-8 bytes). All exports require a new destination.\n",
     )
     return
@@ -45,7 +48,8 @@ async fn execute() -> Unit {
       args.length() == 5 &&
       ["export", "export-csv", "unpack-csv"].contains(args[1])
     ) ||
-    (args.length() == 6 && args[1] == "export-subset")) {
+    (args.length() == 6 && args[1] == "export-subset") ||
+    (args.length() == 7 && args[1] == "export-aggregate")) {
     @stdio.stderr.write(
       "usage: relmask <check|mask|verify> POLICY INPUT, relmask <export|export-csv|unpack-csv> POLICY INPUT DEST, or relmask export-subset POLICY DATA SEEDS DEST\n",
     )
@@ -85,17 +89,22 @@ async fn execute() -> Unit {
     @stdio.stdout.write(policy.verify_bundle(input).report_json() + "\n")
   } else {
     let key = @env.get_env_var("RELMASK_KEY").unwrap_or("")
-    let data = if args[1] == "export-subset" {
-      policy.subset(input, read_text(args[4], 4_000_000L))
+    let data = if args[1] == "export-subset" || args[1] == "export-aggregate" {
+      if args[1] == "export-aggregate" {
+        policy.subset(
+          input,
+          read_text(args[4], 4_000_000L),
+          options=read_text(args[5], 1_000_000L),
+        )
+      } else {
+        policy.subset(input, read_text(args[4], 4_000_000L))
+      }
     } else {
       input
     }
     let output = policy.transform(data, key)
-    if args[1] == "export" || args[1] == "export-subset" {
-      publish(
-        args[if args[1] == "export" { 4 } else { 5 }],
-        output.bundle_json(),
-      )
+    if ["export", "export-subset", "export-aggregate"].contains(args[1]) {
+      publish(args[args.length() - 1], output.bundle_json())
     } else {
       @stdio.stdout.write(output.to_json() + "\n")
     }
