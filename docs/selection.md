@@ -35,14 +35,18 @@ moon run apps/relmask --target wasm -- verify examples/chinook/policy.json year.
 
 | 运算符 | 输入与含义 |
 | --- | --- |
-| eq / neq | text、integer、boolean 的同类型值，或 null；neq 为 eq 的布尔取反 |
-| gt / gte / lt / lte | 非 null 的 text 或 Int64 边界 |
+| eq / neq | text、integer、decimal、boolean 的同类型值，或 null；neq 为 eq 的布尔取反 |
+| gt / gte / lt / lte | 非 null 的 text、Int64 或精确 decimal 边界 |
 | prefix | text 前缀，区分大小写；空前缀匹配全部非 null 文本 |
 | is_null | 布尔值，适用于全部列类型，包括 decimal |
 
 integer 比较始终使用 Int64，包括两端、相邻大整数及 -0 与 0。不能以 1.0 或字符串冒充整数。text 按 UTF-16 code units 字典序比较，公共前缀相同时较短者在前；不使用短串优先排序、数据库排序规则、Unicode 归一化或自然语言排序。ISO 日期范围只是文本范围，适用于示例的一致格式；不解析时区、地区日期或比较不同时区的瞬间。条件针对转换前原值。
 
-null 与 null 相等，与任意非 null 值不等；因此 null 对非 null 的 neq 为 true。范围及 prefix 遇到 null 为 false。这是显式的二值条件语义。decimal 当前仅允许 is_null，精确数值筛选尚未实现；其他运算返回 selector_decimal_unsupported，不改用 Double。
+null 与 null 相等，与任意非 null 值不等；因此 null 对非 null 的 neq 为 true。范围及 prefix 遇到 null 为 false。这是显式的二值条件语义。
+
+decimal 使用 JSON 原始数字的符号、有效数字和十进制位阶比较，不经过 Double，也不展开指数对应的零。指数本身按有符号数字字符串运算，可以超过 Int64；有效数字和指数长度受既有输入预算约束，不额外限制小数位数。1e400、10e399 与 0.01e402 数值相等；负零与正零相等。比较不修改输出，尾零、指数拼写和负零表示原样保留。字符串形式的金额、NaN、Infinity、decimal 的 prefix 均拒绝。
+
+公开金额示例为 select-high-total.json：选择 Total >= 20.00 的 4 张 Chinook 发票及全部 56 条明细。将上面的 SELECTOR 参数换为 examples/chinook/select-high-total.json 即可运行。验证脚本独立用整数分计算期望集合，再逐行核对原始金额表示。筛选采用数值相等；merge_datasets 与 compare_datasets 仍按原始数字表示检查内容差异。
 
 空根对象、空 OR 数组、空分支或空运算符对象均拒绝；无匹配则返回全部表为空的有效数据集。重复或重排 OR 分支不改变选中集合及输出顺序。未知表、列、运算符、重复 JSON 字段和类型不匹配都拒绝，包括未命中或空表上的无效配置。
 
@@ -50,7 +54,7 @@ null 与 null 相等，与任意非 null 值不等；因此 null 对非 null 的
 
 条件文本最多 1000000 UTF-16 code units，最多 64 个 OR 分支、256 个运算符，均按整个配置累计。源数据、最终闭包和输出预算沿用 Plan / options，超限拒绝而非截断。内部直接传递选中行索引，不把大主键重新序列化为种子；显式 subset 的原有种子文本预算保持不变。
 
-条件诊断使用 selector_too_large、empty_selector、selector_type、selector_order_type、selector_decimal_unsupported、selector_branch_limit、selector_predicate_limit 等代码；未知项沿用 unknown_option。位置包含表、分支、列和运算符，不包含筛选值。完整数据验证在筛选前进行，不能用条件掩盖未选中行的原始关系错误。
+条件诊断使用 selector_too_large、empty_selector、selector_type、selector_order_type、selector_branch_limit、selector_predicate_limit 等代码；未知项沿用 unknown_option。位置包含表、分支、列和运算符，不包含筛选值。完整数据验证在筛选前进行，不能用条件掩盖未选中行的原始关系错误。
 
 ```sh
 moon run dev/selection_workflow.mbtx -- wasm

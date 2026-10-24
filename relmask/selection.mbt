@@ -25,7 +25,9 @@ fn selector_value(
 ) -> Unit raise MaskError {
   match (kind, value) {
     (_, Null) => ()
-    (Text, String(_)) | (Boolean, True | False) => ()
+    (Text, String(_))
+    | (Boolean, True | False)
+    | (Decimal, Number(_, repr=Some(_))) => ()
     (Integer, _) => ignore(integer(value, location))
     _ => reject("selector_type", location)
   }
@@ -39,11 +41,17 @@ fn selector_equal(a : Json, b : Json, kind : Kind) -> Bool raise MaskError {
   if kind is Integer {
     return integer(a, "selector") == integer(b, "selector")
   }
+  if kind is Decimal {
+    return decimal_compare(a, b) == 0
+  }
   a.stringify() == b.stringify()
 }
 
 ///|
 fn selector_compare(a : Json, b : Json, kind : Kind) -> Int32 raise MaskError {
+  if kind is Decimal {
+    return decimal_compare(a, b)
+  }
   if kind is Integer {
     let a = integer(a, "selector")
     let b = integer(b, "selector")
@@ -149,9 +157,6 @@ fn Plan::read_selector(
                     }
                   }
                 } else {
-                  if column.kind is Decimal {
-                    reject("selector_decimal_unsupported", location)
-                  }
                   selector_value(value, column.kind, location)
                   match operator {
                     "eq" => Eq(value)
@@ -165,7 +170,9 @@ fn Plan::read_selector(
                     }
                     _ => {
                       if value is Null ||
-                        !(column.kind is Text || column.kind is Integer) {
+                        !(column.kind is Text ||
+                        column.kind is Integer ||
+                        column.kind is Decimal) {
                         reject("selector_order_type", location)
                       }
                       match operator {

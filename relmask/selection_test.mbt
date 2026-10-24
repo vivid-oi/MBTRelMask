@@ -121,10 +121,8 @@ test "selection supports Boolean equality and decimal null checks without coerci
     "{\"t\":[{\"id\":3,\"flag\":null,\"amount\":0.000}]}",
   )
   assert_eq(
-    error_code(() => {
-      ignore(plan.subset_where(data, "{\"t\":[{\"amount\":{\"eq\":1e400}}]}"))
-    }),
-    "selector_decimal_unsupported",
+    plan.subset_where(data, "{\"t\":[{\"amount\":{\"eq\":1e400}}]}"),
+    "{\"t\":[{\"id\":1,\"flag\":true,\"amount\":1e400}]}",
   )
   assert_eq(
     error_code(() => {

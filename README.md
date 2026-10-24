@@ -98,6 +98,8 @@ CI 在三个可移植后端运行核心测试，在 Linux、macOS、Windows 真�
 
 按日期、状态等字段选择样本时，可用 `subset_where` 或 `export-selected POLICY DATA SELECTOR DEST [OPTIONS]`；支持有类型的组合条件，再补齐关系依赖。完整示例选出 Chinook 的 2022 年发票及全部明细，见[条件选样](docs/selection.md)。
 
+金额范围可直接用 decimal 条件，按原始数字精确比较，支持长小数和大指数，保留输出中的原始数字写法。select-high-total.json 示例选出 Total >= 20.00 的 4 张发票及 56 条明细。
+
 需要保留完整订单/发票时，可用 `export-aggregate POLICY DATA SEEDS OPTIONS DEST` 指定反向扩张的子表和总行数上限；超限拒绝，不截断。
 
 已有 CSV 导出时，`export-csv POLICY DIRECTORY DEST` 按目录清单读取全部表，验证关系并替换后生成 bundle；`unpack-csv POLICY BUNDLE DESTDIR` 复核后输出 CSV 文件和清单。保留精确数字、null 和空文本，支持多行字段。见 [CSV 契约与示例](docs/csv.md)。

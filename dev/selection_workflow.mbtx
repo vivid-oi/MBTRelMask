@@ -5,8 +5,23 @@ import {
   "moonbitlang/async/fs",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
+  "moonbitlang/core/string",
 }
 ----
+
+fn fixture_cents(value : Json) -> Int64 raise {
+  guard value is Number(_,repr=Some(raw)) else { fail("fixture money shape") }
+  let parts = raw.split(".").to_array()
+  if parts.length()<1 || parts.length()>2 { fail("fixture money format") }
+  let major = @string.parse_int64(parts[0])
+  if major<0 { fail("fixture expects nonnegative amounts") }
+  let fraction = if parts.length()==1 { 0L } else {
+    if parts[1].length()==1 { @string.parse_int64(parts[1])*10L }
+    else if parts[1].length()==2 { @string.parse_int64(parts[1]) }
+    else { fail("fixture money scale") }
+  }
+  major*100L+fraction
+}
 
 async fn main {
   let args = @env.args()
@@ -80,5 +95,32 @@ async fn main {
     @json.parse(empty) is Object(tables) else { fail("empty selection shape") }
   for _,table in tables { guard table is Array([]) else { fail("unexpected nonempty selection") } }
   @shell.Cmd(moon,prefix+["verify",policy,absent],stdout=Discard).run()
+  let expensive = directory + "/high-total.bundle.json"
+  @shell.Cmd(moon,prefix+["export-selected",policy,source,"examples/chinook/select-high-total.json",expensive,options],env=key,stderr=Discard).run()
+  guard @json.parse(@fs.read_file(expensive[:]).text()) is {"data":String(expensive_data),..} &&
+    @json.parse(expensive_data,preserve_number_repr=true) is {"Invoice":Array(expensive_rows),"InvoiceLine":Array(expensive_lines),..} else { fail("money selection shape") }
+  let expensive_expected : Array[Json] = []
+  let expensive_ids : Map[String,Bool] = Map([])
+  for row in invoices {
+    guard row is {"InvoiceId":id,"Total":total,..} else { fail("money invoice shape") }
+    if fixture_cents(total)>=2000L { expensive_expected.push(row); expensive_ids[id.stringify()]=true }
+  }
+  let wanted_lines = lines.filter(row => {
+    guard row is {"InvoiceId":id,..} else { abort("money line shape") }
+    expensive_ids.contains(id.stringify())
+  })
+  if expensive_expected.is_empty() || expensive_rows.length()!=expensive_expected.length() || expensive_lines.length()!=wanted_lines.length() { fail("money selection counts") }
+  for i,row in expensive_rows {
+    guard row is Object(a) && expensive_expected[i] is Object(b) else { fail("money row shape") }
+    if a["Total"].stringify()!=b["Total"].stringify() || a["InvoiceDate"]!=b["InvoiceDate"] { fail("money representation changed") }
+  }
+  for i,row in expensive_lines {
+    guard row is Object(a) && wanted_lines[i] is Object(b) else { fail("money line shape") }
+    for field in ["UnitPrice","Quantity"] {
+      if a[field].stringify()!=b[field].stringify() { fail("money line values changed") }
+    }
+  }
+  @shell.Cmd(moon,prefix+["verify",policy,expensive],stdout=Discard).run()
+  println("Decimal workflow: " + expensive_rows.length().to_string() + " invoices at least 20.00 and " + expensive_lines.length().to_string() + " full lines; independently checked with integer cents and unchanged number representations")
   println("Selection workflow: " + actual.length().to_string() + " invoices from 2022 and " + details.length().to_string() + " complete line items; business values, parent closure, default scope, no-clobber and recovery checked")
 }

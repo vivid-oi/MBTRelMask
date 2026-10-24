@@ -18,3 +18,5 @@ NyaCSV's public API was inspected as ecosystem context (Apache-2.0, https://gith
 No Greenmask, Presidio, MoonFixture, MoonScrub or LunaSieve implementation or test code is included. They informed the project boundary: existing-data transformation with declared relational invariants, rather than text scanning or synthetic data generation.
 
 The SHA-256 empty/abc/multi-block/million-a digests are standard conformance values. Other boundary fixtures in the tests were constructed for this repository. Passing these vectors is not an independent cryptographic audit.
+
+The private decimal predicate comparator, signed exponent digit arithmetic and associated tests were written in this repository. No external decimal implementation or test corpus is included. It uses the existing MoonBit core JSON number representations; its normalization is used only for comparison and does not rewrite dataset values.

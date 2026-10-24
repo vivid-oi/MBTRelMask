@@ -17,3 +17,5 @@
 `moon run dev/verify.mbtx -- native` 真正调用 CLI，逐表比较行/列数量、金额和时间，并独立遍历客户→发票→明细引用。
 
 select-2022.json 与 select-options.json 是本仓库编写的条件/关系配置，选择 2022 年的 83 张发票、455 条明细及父依赖。运行方法见[条件选样](../../docs/selection.md)，自动验证为 dev/selection_workflow.mbtx；不改动上游 data.json。
+
+select-high-total.json 选择 Total >= 20.00 的 4 张发票；配合 select-options.json 保留全部 56 条明细。自动验证以整数分独立计算期望集合，金额筛选不使用 Double，输出保留原始数字表示。新增配置和验证代码使用本仓库 Apache-2.0 许可。
