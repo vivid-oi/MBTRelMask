@@ -36,6 +36,9 @@ async fn execute() -> Unit {
   let args = @env.args()
   if args.length() == 2 && (args[1] == "--help" || args[1] == "help") {
     @stdio.stdout.write(
+      "relmask export-state POLICY DATA STATE_OR_DASH DESTDIR\n",
+    )
+    @stdio.stdout.write(
       "relmask export-aggregate POLICY DATA SEEDS OPTIONS DEST\n",
     )
     @stdio.stdout.write(
@@ -48,7 +51,7 @@ async fn execute() -> Unit {
       args.length() == 5 &&
       ["export", "export-csv", "unpack-csv"].contains(args[1])
     ) ||
-    (args.length() == 6 && args[1] == "export-subset") ||
+    (args.length() == 6 && ["export-subset", "export-state"].contains(args[1])) ||
     (args.length() == 7 && args[1] == "export-aggregate")) {
     @stdio.stderr.write(
       "usage: relmask <check|mask|verify> POLICY INPUT, relmask <export|export-csv|unpack-csv> POLICY INPUT DEST, or relmask export-subset POLICY DATA SEEDS DEST\n",
@@ -77,6 +80,22 @@ async fn execute() -> Unit {
   )
   if args[1] == "check" {
     @stdio.stdout.write(policy.validate(input) + "\n")
+  } else if args[1] == "export-state" {
+    let key = @env.get_env_var("RELMASK_KEY").unwrap_or("")
+    let batch = if args[4] == "-" {
+      policy.transform_with_state(input, key)
+    } else {
+      policy.transform_with_state(
+        input,
+        key,
+        previous=read_text(args[4], 32_000_000L),
+      )
+    }
+    publish_directory(args[5], [
+      ("bundle.json", batch.dataset().bundle_json()),
+      ("state.json", batch.state_json()),
+    ])
+    @stdio.stderr.write(batch.dataset().report_json() + "\n")
   } else if args[1] == "unpack-csv" {
     let checked = policy.verify_bundle(input)
     publish_csv_directory(

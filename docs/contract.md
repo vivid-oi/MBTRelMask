@@ -34,7 +34,7 @@ null 始终保持 null。缺失字段与 null 不同，缺失即拒绝。每列�
 
 错误类型 `MaskError::Invalid(code~, location~)` 不带输入值。检查报告只包含算法版本、约束检查状态、变更单元格数量和各表行数；不会输出秘密、原值或映射表。库调用在失败时不返回部分转换结果，也不污染 Plan 的后续调用。
 
-不支持 decimal 键、嵌套单元格、数据库排序规则、SQL dump、数据库连接、格式保持加密、增量映射或隐私保证。这些输入必须明确拒绝，不能自动退化。
+不支持 decimal 键、嵌套单元格、数据库排序规则、SQL dump、数据库连接、格式保持加密、映射分支自动合并或隐私保证。这些输入必须明确拒绝，不能自动退化。跨批整数映射采用独立的[状态契约](state.md)，普通 transform 行为不变。
 
 外键可设 `"match":"full"`：整个引用全部 null 时免匹配，全部非 null 时必须匹配，部分 null 报 `partial_null_reference`。默认或显式 `"match":"simple"` 保持既有行为。其他 match 值拒绝。JSON/CSV 导入、转换前后、bundle 复核、子集选择都检查同一规则；不会自动补全或清空部分键。语义参照 [PostgreSQL 外键文档](https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-FK)。不模拟完整数据库行为。
 

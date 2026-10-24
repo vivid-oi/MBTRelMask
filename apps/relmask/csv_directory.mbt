@@ -73,6 +73,21 @@ async fn publish_csv_directory(
   }
   files.push(("manifest.json", "{" + manifest.join(",") + "}"))
   files.push(("report.json", report))
+  publish_directory(destination, files)
+}
+
+///|
+async fn publish_directory(
+  destination : String,
+  files : Array[(String, String)],
+) -> Unit {
+  let mut total = 0L
+  for (_, content) in files {
+    total += @utf8.encode(content[:]).length().to_int64()
+    if total > 128_000_000L {
+      fail("directory output exceeds CLI byte budget")
+    }
+  }
   let temporary = destination + "." + random_suffix() + ".pending"
   @async.protect_from_cancel(() => {
     @fs.mkdir(temporary[:], permission=0o700, allow_exist=false)

@@ -1,0 +1,66 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/shell",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn main {
+  let args = @env.args()
+  let target = if args.length() > 1 { args[1] } else { "wasm" }
+  let moon = if args.length() > 2 { args[2] } else { "moon" }
+  let directory = @fs.tmpdir(prefix="relmask-state-")
+  defer {
+    for name in @fs.readdir(directory[:]) {
+      let path = directory + "/" + name
+      if @fs.kind(path[:]) == Directory {
+        for file in @fs.readdir(path[:]) { let child = path + "/" + file; @fs.remove(child[:]) }
+        @fs.rmdir(path[:])
+      } else { @fs.remove(path[:]) }
+    }
+    @fs.rmdir(directory[:])
+  }
+  let prefix = ["run","--frozen","--target",target,"apps/relmask","--"]
+  let policy = "examples/chinook/policy.json"
+  let data = "examples/chinook/data.json"
+  let key = {"RELMASK_KEY":"public-example-key-never-use-for-private-data"}
+  let first = directory + "/first"
+  @shell.Cmd(moon,prefix + ["export-state",policy,data,"-",first],env=key,stderr=Discard).run()
+  let state_path = first + "/state.json"
+  let original_state = @fs.read_file(state_path[:]).text()
+  let source = @json.parse(@fs.read_file(data).text(),preserve_number_repr=true)
+  guard source is {"Artist":Array(artists),..} else { fail("source shape") }
+  artists.push(@json.parse("{\"ArtistId\":999999,\"Name\":\"Incremental sample\"}",preserve_number_repr=true))
+  let next_data = directory + "/next.json"
+  @fs.write_file(next_data[:],source.stringify())
+  let second = directory + "/second"
+  let command = prefix + ["export-state",policy,next_data,state_path,second]
+  @shell.Cmd(moon,command,env=key,stderr=Discard).run()
+  let a_path = first + "/bundle.json"
+  let b_path = second + "/bundle.json"
+  guard @json.parse(@fs.read_file(a_path[:]).text()) is {"data":String(a),..} && @json.parse(@fs.read_file(b_path[:]).text()) is {"data":String(b),..} else { fail("bundle shape") }
+  guard @json.parse(a,preserve_number_repr=true) is Object(before) && @json.parse(b,preserve_number_repr=true) is Object(after) else { fail("dataset shape") }
+  for name, rows in before {
+    guard rows is Array(old) && after.get(name) is Some(Array(new)) else { fail("table loss") }
+    if new.length() != old.length() + (if name == "Artist" { 1 } else { 0 }) { fail("unexpected row count") }
+    for i, row in old { if row.stringify() != new[i].stringify() { fail("existing mapping changed") } }
+  }
+  @shell.Cmd(moon,prefix + ["verify",policy,b_path],stdout=Discard).run()
+  if @fs.read_file(state_path[:]).text() != original_state { fail("previous state mutated") }
+  let again = @shell.Cmd(moon,command,env=key,stderr=Discard).output()
+  if again.exit_code() != 1 { fail("existing state directory overwritten") }
+  let bad_state = directory + "/bad.json"
+  @fs.write_file(bad_state[:],"{}")
+  let absent = directory + "/absent"
+  let bad = @shell.Cmd(moon,prefix + ["export-state",policy,data,bad_state,absent],env=key,stderr=Discard).output()
+  if bad.exit_code() != 1 || @fs.exists(absent[:]) { fail("invalid state published a partial pair") }
+  @shell.Cmd(moon,prefix + ["export-state",policy,next_data,state_path,absent],env=key,stderr=Discard).run()
+  let recovered_state = absent + "/state.json"
+  let second_state = second + "/state.json"
+  if @fs.read_file(recovered_state[:]).text() != @fs.read_file(second_state[:]).text() { fail("state recovery changed mapping") }
+  for name in @fs.readdir(directory[:]) { if name.has_suffix(".pending") { fail("state staging leaked") } }
+  println("State workflow: all 15607 existing Chinook rows retain their mapped values after adding an artist; paired publication, no-clobber and recovery checked")
+}

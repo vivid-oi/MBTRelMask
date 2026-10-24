@@ -20,5 +20,14 @@ test {
   assert_eq(selected, data)
   let csv_tables = plan.export_csv(received.to_json())
   assert_eq(plan.import_csv(csv_tables), received.to_json())
+  let batch = plan.transform_with_state(
+    data, "example-only-key-at-least-32-bytes",
+  )
+  let replay = plan.transform_with_state(
+    data,
+    "example-only-key-at-least-32-bytes",
+    previous=batch.state_json(),
+  )
+  assert_eq(replay.dataset().to_json(), batch.dataset().to_json())
 }
 ```

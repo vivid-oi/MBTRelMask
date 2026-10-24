@@ -95,6 +95,6 @@ CI 在三个可移植后端运行核心测试，在 Linux、macOS、Windows 真�
 
 三套采用流程见[使用场景](docs/workflows.md)，文件格式和失败恢复见[导出契约](docs/bundles.md)。完整性摘要没有秘密，不能认证发布者；修改策略空白或换行也会改变指纹。文件中的变更数量无法在缺少原数据时独立证明。
 
-后续按实际采用需求推进跨批持久映射；该能力尚未实现。现有 CSV 只支持文档明确列出的方言和 null 约定。
+需要增量样本稳定 ID 时，`transform_with_state` 和 `export-state POLICY DATA STATE_OR_DASH DESTDIR` 使用认证快照追加映射，已有 ID 不变。见[状态契约](docs/state.md)。状态须串行更新，不支持分叉合并。现有 CSV 只支持文档明确列出的方言和 null 约定。
 
 Apache-2.0。外部资源及许可见 [THIRD_PARTY.md](THIRD_PARTY.md)。

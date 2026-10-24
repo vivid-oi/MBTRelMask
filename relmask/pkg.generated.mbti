@@ -20,6 +20,12 @@ pub fn CheckedDataset::bundle_json(Self) -> String
 pub fn CheckedDataset::report_json(Self) -> String
 pub fn CheckedDataset::to_json(Self) -> String
 
+pub struct MappedDataset {
+  // private fields
+}
+pub fn MappedDataset::dataset(Self) -> CheckedDataset
+pub fn MappedDataset::state_json(Self) -> String
+
 pub struct Plan {
   // private fields
 }
@@ -28,6 +34,7 @@ pub fn Plan::import_csv(Self, Map[String, String]) -> String raise MaskError
 pub fn Plan::parse(String) -> Self raise MaskError
 pub fn Plan::subset(Self, String, String, options? : String) -> String raise MaskError
 pub fn Plan::transform(Self, String, String) -> CheckedDataset raise MaskError
+pub fn Plan::transform_with_state(Self, String, String, previous? : String, max_entries? : Int32) -> MappedDataset raise MaskError
 pub fn Plan::validate(Self, String) -> String raise MaskError
 pub fn Plan::verify_bundle(Self, String) -> CheckedDataset raise MaskError
 
