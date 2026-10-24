@@ -21,6 +21,7 @@ async fn main {
   @shell.Cmd(moon, ["test","--frozen","--target",target,"--deny-warn"]).run()
   if target == "native" || target == "wasm" {
     let prefix = ["run","--frozen","--target",target,"apps/relmask","--"]
+    @shell.Cmd(moon, prefix + ["check","examples/tenants/full-policy.json","examples/tenants/full-data.json"]).run()
     @shell.Cmd(moon, prefix + ["check","examples/tenants/policy.json","examples/tenants/data.json"]).run()
     @shell.Cmd(moon, prefix + ["check","examples/chinook/policy.json","examples/chinook/data.json"]).run()
     let run = @shell.Cmd(moon, prefix + ["mask","examples/chinook/policy.json","examples/chinook/data.json"],

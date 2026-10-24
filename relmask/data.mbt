@@ -129,6 +129,17 @@ fn validate_rows(plan : Plan, rows : Rows) -> Unit raise MaskError {
         false,
       )
       for ri, row in rows[ti] {
+        if reference.full {
+          let nulls = reference.columns
+            .filter(name => row[column_index(table, name).unwrap()] is Null)
+            .length()
+          if nulls > 0 && nulls < reference.columns.length() {
+            reject(
+              "partial_null_reference",
+              table.name + "[" + ri.to_string() + "].references",
+            )
+          }
+        }
         if tuple_key(row, table, reference.columns) is Some(key) &&
           !parent.contains(key) {
           reject(

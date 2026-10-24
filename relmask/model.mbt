@@ -54,6 +54,7 @@ priv struct Reference {
   columns : Array[String]
   target : String
   target_columns : Array[String]
+  full : Bool
 }
 
 ///|

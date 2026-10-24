@@ -1,6 +1,8 @@
 # 多租户事件导出
 
 这是本项目编写的合成回归样本，随项目使用 Apache-2.0 许可。
+
+`full-policy.json` / `full-data.json` 演示 MATCH FULL：可空复合引用必须全部为空或全部有值。运行 `moon run apps/relmask --target wasm -- check examples/tenants/full-policy.json examples/tenants/full-data.json`，把第二条事件 account 从 null 改为 7 会被拒绝。
 多个租户可拥有相同 account ID，因此只有 `(tenant, account)` 元组唯一。
 事件引用完整元组；替换后仍可区分 north/7 与 south/7。
 

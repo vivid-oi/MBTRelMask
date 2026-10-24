@@ -1,0 +1,11 @@
+{"tables":[
+  {"name":"accounts","columns":[
+    {"name":"tenant","type":"text","rule":{"token":{"domain":"tenant"}}},
+    {"name":"account","type":"integer","rule":{"reindex":1000}}
+  ],"primary":["tenant","account"]},
+  {"name":"events","columns":[
+    {"name":"id","type":"integer","rule":"keep"},
+    {"name":"tenant","type":"text","nullable":true,"rule":{"token":{"domain":"tenant"}}},
+    {"name":"account","type":"integer","nullable":true,"rule":{"reindex":1000}}
+  ],"primary":["id"],"references":[{"columns":["tenant","account"],"table":"accounts","target":["tenant","account"],"match":"full"}]}
+]}

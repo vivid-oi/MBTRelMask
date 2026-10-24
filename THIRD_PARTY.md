@@ -8,6 +8,7 @@
 | FIPS 180-4 | SHA-256 algorithm and standard constants; implementation written for this package | https://csrc.nist.gov/pubs/fips/180-4/upd1/final |
 | RFC 2104 and RFC 4231 | HMAC construction and conformance vectors 1, 2, 6 | RFC 4231 §4 permits use of vectors for conformance testing; https://www.rfc-editor.org/rfc/rfc4231 |
 | RFC 4180 | Reference for comma, quote and record boundaries; private CSV reader and test fixtures written for this package | No implementation or example text copied; https://www.rfc-editor.org/rfc/rfc4180 |
+| PostgreSQL foreign-key documentation | Semantic reference for MATCH SIMPLE / MATCH FULL; tests constructed here | No implementation or example text copied; https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-FK |
 
 NyaCSV's public API was inspected as ecosystem context (Apache-2.0, https://github.com/moonbit-community/NyaCSV). No NyaCSV code or tests are included. RelMask's private reader retains quote metadata for its explicit null marker; its public CSV boundary is a typed, relational dataset workflow.
 

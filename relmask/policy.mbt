@@ -184,7 +184,15 @@ pub fn Plan::parse(source : String) -> Plan raise MaskError {
       Some(x) =>
         items(x, loc).map(x => {
           let refobj = fields(x, loc)
-          only_keys(refobj, ["columns", "table", "target"], loc)
+          only_keys(refobj, ["columns", "table", "target", "match"], loc)
+          let full = match refobj.get("match") {
+            None | Some(String("simple")) => false
+            Some(String("full")) => true
+            _ => {
+              reject("unsupported_reference_match", loc)
+              false
+            }
+          }
           let columns = names(required(refobj, "columns", loc), loc)
           let target_columns = names(required(refobj, "target", loc), loc)
           if columns.is_empty() || columns.length() != target_columns.length() {
@@ -194,6 +202,7 @@ pub fn Plan::parse(source : String) -> Plan raise MaskError {
             columns,
             target: text(required(refobj, "table", loc), loc),
             target_columns,
+            full,
           }
         })
     }
