@@ -44,6 +44,7 @@ pub struct Plan {
 pub fn Plan::compare_datasets(Self, String, String) -> DatasetDiff raise MaskError
 pub fn Plan::diagnose(Self, String, max_issues? : Int32) -> Diagnostics raise MaskError
 pub fn Plan::export_csv(Self, String) -> Map[String, String] raise MaskError
+pub fn Plan::export_sql(Self, String, schema? : String, max_output_units? : Int32) -> String raise MaskError
 pub fn Plan::import_csv(Self, Map[String, String]) -> String raise MaskError
 pub fn Plan::parse(String) -> Self raise MaskError
 pub fn Plan::subset(Self, String, String, options? : String) -> String raise MaskError

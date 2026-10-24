@@ -1,0 +1,7 @@
+{"tables":[{"name":"probe","columns":[
+{"name":"id","type":"integer","rule":"keep"},
+{"name":"value","type":"decimal","rule":"keep"},
+{"name":"label","type":"text","nullable":true,"max_length":64,"rule":"keep"},
+{"name":"flag","type":"boolean","rule":"keep"},
+{"name":"parent","type":"integer","rule":"keep"}
+],"primary":["id"],"unique":[{"columns":["label"],"nulls":"not_distinct"}],"references":[{"columns":["parent"],"table":"probe","target":["id"]}]}]}

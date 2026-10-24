@@ -1,6 +1,10 @@
 # 验证记录
 
-当前本轮：55 项测试在 Wasm、Wasm-GC、JS 通过；新增可空唯一键、日期平移及批量诊断。真实工作流覆盖 Chinook 428 个日期，以及同时存在重复键/孤儿引用的诊断、阶段/截断/非泄露和恢复。下方保留此前阶段记录。
+当前本轮：59 项测试在 Wasm、Wasm-GC、JS 通过；新增可空唯一键、日期平移、批量诊断及 PostgreSQL 导出。格式、生成接口及 Native 严格检查通过。真实工作流覆盖 Chinook 428 个日期，以及同时存在重复键/孤儿引用的诊断、阶段/截断/非泄露和恢复。下方保留此前阶段记录。
+
+2026-10-25，本机 Windows 使用官方 EDB PostgreSQL 18.6 二进制启动隔离、仅监听回环地址的 UTF-8 临时数据库，实际执行 Wasm CLI 生成的 SQL。Chinook 全部 11 表 15607 行导入并逐表计数核对；探针验证 Int64 两端、1e400、27 位小数、引号/CRLF/Unicode/反斜杠、自引用循环，实际触发 UNIQUE NULLS NOT DISTINCT、外键、长度 CHECK、NOT NULL 错误。再次导入拒绝已有 schema，并保留原数据。测试结束数据库已停止。此证据为 Wasm CLI + Windows PostgreSQL 实际运行；本机 Native 仍只有编译检查。
+
+SQL 单元测试另覆盖确定性、数字范围两端/越界/巨大指数、负零、NUL、标识符 UTF-8 字节上限、输出预算、MATCH FULL 和失败后恢复。CLI 工作流验证完整文件发布、目标不覆盖、生成失败不留文件。数据库测试命令和环境要求见 [SQL 导出](sql.md)。CI 增加独立 PostgreSQL 18 服务任务；实际远端状态以该提交 Checks 为准。
 
 2026-10-24 至 2026-10-25，Windows x86-64：
 
@@ -24,4 +28,4 @@
 
 状态映射 `122795d` 的[检查](https://github.com/vivid-oi/MBTRelMask/actions/runs/40118382763)全部成功，包含 41 项测试及完整文件流程，覆盖同样六项矩阵任务。
 
-`dev/verify.mbtx` 执行格式、接口漂移、严格检查、测试；Native / Wasm 另运行完整 Chinook 命令，并运行 bundle、subset、csv、state 四套文件工作流。所有开发自动化均为 `.mbtx`，不要求 Python、数据库服务或 Node 程序参与 Native 演示。
+`dev/verify.mbtx` 执行格式、接口漂移、严格检查、测试；Native / Wasm 另运行完整 Chinook 命令，以及 bundle、subset、csv、state、dates、audit、sql 文件工作流。所有开发自动化均为 `.mbtx`，基本文件演示不要求 Python、数据库服务或 Node 程序；显式的 SQL 数据库集成任务另需 PostgreSQL 和 psql。

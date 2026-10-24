@@ -1,0 +1,91 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/shell",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn query(psql : String, sql : String) -> String {
+  let result = @shell.Cmd(psql,["-X","-q","-A","-t","-v","ON_ERROR_STOP=1","-c",sql]).output(max_output_bytes=4_000_000)
+  if result.exit_code() != 0 { fail("PostgreSQL query failed: " + result.stderr()) }
+  result.stdout().trim().to_owned()
+}
+
+async fn main {
+  let args = @env.args()
+  let target = if args.length() > 1 { args[1] } else { "wasm" }
+  let moon = if args.length() > 2 { args[2] } else { "moon" }
+  let database = args.contains("--database")
+  let directory = @fs.tmpdir(prefix="relmask-sql-")
+  defer {
+    for name in @fs.readdir(directory[:]) { let path = directory + "/" + name; @fs.remove(path[:]) }
+    @fs.rmdir(directory[:])
+  }
+  let prefix = ["run","--frozen","--target",target,"apps/relmask","--"]
+  let key = {"RELMASK_KEY":"public-example-key-never-use-for-private-data"}
+  let policy = "examples/chinook/policy.json"
+  let bundle = directory + "/chinook.json"
+  let sql = directory + "/chinook.sql"
+  @shell.Cmd(moon,prefix + ["export",policy,"examples/chinook/data.json",bundle],env=key,stderr=Discard).run()
+  @shell.Cmd(moon,prefix + ["unpack-sql",policy,bundle,sql],stderr=Discard).run()
+  let saved = @fs.read_file(sql[:]).text()
+  if !saved.has_prefix("BEGIN;") || !saved.has_suffix("COMMIT;\n") { fail("transaction shape") }
+  let again = @shell.Cmd(moon,prefix + ["unpack-sql",policy,bundle,sql],stderr=Discard).output()
+  if again.exit_code() != 1 || @fs.read_file(sql[:]).text() != saved { fail("SQL file overwritten") }
+  let probe_bundle = directory + "/probe.json"
+  let probe_sql = directory + "/probe.sql"
+  @shell.Cmd(moon,prefix + ["export","examples/sql/policy.json","examples/sql/data.json",probe_bundle],env=key,stderr=Discard).run()
+  @shell.Cmd(moon,prefix + ["unpack-sql","examples/sql/policy.json",probe_bundle,probe_sql,"relmask_probe"],stderr=Discard).run()
+  let nul_data = directory + "/nul.json"
+  let nul_bundle = directory + "/nul.bundle.json"
+  let absent = directory + "/absent.sql"
+  let raw = @fs.read_file("examples/sql/data.json").text().replace(old="界",new="\\u0000")
+  @fs.write_file(nul_data[:],raw)
+  @shell.Cmd(moon,prefix + ["export","examples/sql/policy.json",nul_data,nul_bundle],env=key,stderr=Discard).run()
+  let nul = @shell.Cmd(moon,prefix + ["unpack-sql","examples/sql/policy.json",nul_bundle,absent]).output()
+  if nul.exit_code() != 1 || !nul.stderr().contains("sql_text_nul") || @fs.exists(absent[:]) { fail("unsafe SQL text accepted") }
+  println("SQL file workflow: Chinook and precision/cycle probes exported; no-clobber and NUL refusal checked")
+  if !database { return }
+  let psql = @env.get_env_var("RELMASK_PSQL").unwrap_or("psql")
+  let version = query(psql,"SELECT current_setting('server_version_num');")
+  if !version.has_prefix("18") { fail("database integration check expects PostgreSQL 18") }
+  let mut owned_main = false
+  let mut owned_probe = false
+  defer {
+    if owned_probe { ignore(query(psql,"DROP SCHEMA \"relmask_probe\" CASCADE;")) }
+    if owned_main { ignore(query(psql,"DROP SCHEMA \"relmask_fixture\" CASCADE;")) }
+  }
+  let load = @shell.Cmd(psql,["-X","-q","-v","ON_ERROR_STOP=1","-f",sql]).output()
+  if load.exit_code() != 0 { fail("PostgreSQL import failed: " + load.stderr()) }
+  owned_main = true
+  guard @json.parse(@fs.read_file("examples/chinook/data.json").text()) is Object(original) else { fail("source shape") }
+  let mut total = 0
+  for name, value in original {
+    guard value is Array(rows) else { fail("rows") }
+    let actual = query(psql,"SELECT count(*) FROM \"relmask_fixture\".\"" + name + "\";")
+    if actual != rows.length().to_string() { fail("PostgreSQL row count mismatch") }
+    total += rows.length()
+  }
+  if query(psql,"SELECT count(*) FROM \"relmask_fixture\".\"Invoice\" i LEFT JOIN \"relmask_fixture\".\"Customer\" c ON i.\"CustomerId\"=c.\"CustomerId\" WHERE c.\"CustomerId\" IS NULL;") != "0" { fail("PostgreSQL graph mismatch") }
+  let probe_load = @shell.Cmd(psql,["-X","-q","-v","ON_ERROR_STOP=1","-f",probe_sql]).output()
+  if probe_load.exit_code() != 0 { fail("PostgreSQL probe failed: " + probe_load.stderr()) }
+  owned_probe = true
+  let result = query(psql,"SELECT json_agg(t) FROM (SELECT id::text AS id,value::text AS value,label,flag FROM relmask_probe.probe ORDER BY id) t;")
+  guard @json.parse(result) is Array([{"id":String(low),"value":String(fraction),"label":Null,"flag":False,..},{"id":String(high),"value":String(big),"label":String(label),"flag":True,..}]) else { fail("PostgreSQL probe shape") }
+  if low != "-9223372036854775808" || high != "9223372036854775807" || fraction != "0.12345678901234567890123456789" || big != "1" + Array::make(400,"0").join("") || label != "'; DROP SCHEMA public;--\r\n界\\end" { fail("PostgreSQL value preservation failed") }
+  if query(psql,"SELECT count(*) FROM relmask_probe.probe p JOIN relmask_probe.probe q ON p.parent=q.id;") != "2" { fail("cycle lost") }
+  let unique_failure = @shell.Cmd(psql,["-X","-q","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose","-c","INSERT INTO relmask_probe.probe VALUES (1,1,NULL,true,9223372036854775807);"]).output()
+  if unique_failure.exit_code() == 0 || !unique_failure.stderr().contains("23505") { fail("NULLS NOT DISTINCT not enforced") }
+  let fk_failure = @shell.Cmd(psql,["-X","-q","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose","-c","INSERT INTO relmask_probe.probe VALUES (1,1,'new',true,123);"]).output()
+  if fk_failure.exit_code() == 0 || !fk_failure.stderr().contains("23503") { fail("foreign key not enforced") }
+  let length_failure = @shell.Cmd(psql,["-X","-q","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose","-c","INSERT INTO relmask_probe.probe VALUES (1,1,repeat('😀',65),true,9223372036854775807);"]).output()
+  if length_failure.exit_code() == 0 || !length_failure.stderr().contains("23514") { fail("text length not enforced") }
+  let null_failure = @shell.Cmd(psql,["-X","-q","-v","ON_ERROR_STOP=1","-v","VERBOSITY=verbose","-c","INSERT INTO relmask_probe.probe VALUES (1,1,'new',NULL,9223372036854775807);"]).output()
+  if null_failure.exit_code() == 0 || !null_failure.stderr().contains("23502") { fail("NOT NULL not enforced") }
+  let collision = @shell.Cmd(psql,["-X","-q","-v","ON_ERROR_STOP=1","-f",sql]).output()
+  if collision.exit_code() == 0 || query(psql,"SELECT count(*) FROM relmask_fixture.\"Artist\";") != "275" { fail("existing schema changed") }
+  println("PostgreSQL 18 integration: " + total.to_string() + " Chinook rows, exact Int64/NUMERIC, Unicode/control text, cycles, unique/FK enforcement and existing-schema refusal passed")
+}

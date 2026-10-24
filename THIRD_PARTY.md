@@ -2,6 +2,8 @@
 
 | Resource | Use | License / source |
 | --- | --- | --- |
+| PostgreSQL 18 | SQL type/identifier/constraint semantics and real database validation; exporter and probe tests written here | PostgreSQL License, https://www.postgresql.org/about/licence/ ; numeric limits https://www.postgresql.org/docs/18/datatype-numeric.html ; identifiers https://www.postgresql.org/docs/18/sql-syntax-lexical.html ; no implementation or example text copied |
+| Official postgres Docker image / EDB Windows binaries | CI PostgreSQL 18 service / local isolated PostgreSQL 18.6 validation; not redistributed here | PostgreSQL and bundled components retain their respective licenses; https://hub.docker.com/_/postgres ; https://www.enterprisedb.com/download-postgresql-binaries |
 | RFC 3339 | Date/time component format reference for a documented strict subset; Gregorian arithmetic and fixtures written here | No implementation or example text copied; https://www.rfc-editor.org/rfc/rfc3339 |
 | MoonBit core | JSON parser with duplicate rejection and preserved number representations; collections and UTF-8 | Apache-2.0, https://github.com/moonbitlang/core |
 | moonbitlang/async 0.22.5 | Native/moonrun file I/O, runtime exit import binding and development command execution | Apache-2.0, https://github.com/moonbitlang/async |

@@ -35,6 +35,7 @@ async fn read_text(path : String, maximum : Int64) -> String {
 async fn execute() -> Unit {
   let args = @env.args()
   if args.length() == 2 && (args[1] == "--help" || args[1] == "help") {
+    @stdio.stdout.write("relmask unpack-sql POLICY BUNDLE DEST [SCHEMA]\n")
     @stdio.stdout.write("relmask diagnose POLICY DATA\n")
     @stdio.stdout.write(
       "relmask compare POLICY BEFORE_BUNDLE AFTER_BUNDLE (exit 3 if different)\n",
@@ -56,12 +57,17 @@ async fn execute() -> Unit {
     ) ||
     (
       args.length() == 5 &&
-      ["export", "export-csv", "unpack-csv", "compare"].contains(args[1])
+      ["export", "export-csv", "unpack-csv", "compare", "unpack-sql"].contains(
+        args[1],
+      )
     ) ||
-    (args.length() == 6 && ["export-subset", "export-state"].contains(args[1])) ||
+    (
+      args.length() == 6 &&
+      ["export-subset", "export-state", "unpack-sql"].contains(args[1])
+    ) ||
     (args.length() == 7 && args[1] == "export-aggregate")) {
     @stdio.stderr.write(
-      "usage: relmask <check|mask|verify> POLICY INPUT, relmask <export|export-csv|unpack-csv> POLICY INPUT DEST, or relmask export-subset POLICY DATA SEEDS DEST\n",
+      "invalid arguments: run relmask --help for command forms\n",
     )
     exit_process(2)
     return
@@ -79,7 +85,7 @@ async fn execute() -> Unit {
   }
   let input = read_text(
     args[3],
-    if ["verify", "unpack-csv", "compare"].contains(args[1]) {
+    if ["verify", "unpack-csv", "compare", "unpack-sql"].contains(args[1]) {
       128_000_000L
     } else {
       64_000_000L
@@ -99,6 +105,11 @@ async fn execute() -> Unit {
     if !difference.is_empty() {
       exit_process(3)
     }
+  } else if args[1] == "unpack-sql" {
+    let data = policy.verify_bundle(input)
+    let schema = if args.length() == 6 { args[5] } else { "relmask_fixture" }
+    publish(args[4], policy.export_sql(data.to_json(), schema~))
+    @stdio.stderr.write(data.report_json() + "\n")
   } else if args[1] == "check" {
     @stdio.stdout.write(policy.validate(input) + "\n")
   } else if args[1] == "export-state" {

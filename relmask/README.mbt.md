@@ -21,6 +21,9 @@ test {
   assert_eq(selected, data)
   let csv_tables = plan.export_csv(received.to_json())
   assert_eq(plan.import_csv(csv_tables), received.to_json())
+  let sql = plan.export_sql(received.to_json(), schema="sample_test")
+  assert_true(sql.contains("CREATE SCHEMA \"sample_test\";"))
+  assert_true(sql.contains("'100'::bigint"))
   let batch = plan.transform_with_state(
     data, "example-only-key-at-least-32-bytes",
   )

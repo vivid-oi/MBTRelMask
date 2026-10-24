@@ -90,6 +90,8 @@ moon run dev/verify.mbtx -- native
 
 CI 在三个可移植后端运行核心测试，在 Linux、macOS、Windows 真正运行 Native 命令和 Chinook 工作流。
 
+需要在测试数据库中运行联表查询时，`unpack-sql POLICY BUNDLE DEST [SCHEMA]` 复核 bundle 后生成 PostgreSQL 18 事务脚本，创建独立 schema，保留精确数值和已声明约束。CI 另用真实 PostgreSQL 18 导入全部 Chinook 数据及精度/循环探针。范围、拒绝条件和运行命令见 [SQL 导出](docs/sql.md)。
+
 多租户场景见[复合引用示例](examples/tenants/README.md)。
 
 需要缩小故障样本时，`Plan::subset` 和 `export-subset POLICY DATA SEEDS DEST` 会保留指定记录及递归父依赖，然后可以继续替换和复核。见[关系裁剪](docs/subsets.md)。
