@@ -1,0 +1,73 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/json",
+}
+----
+
+async fn main {
+  let source = @fs.read_file("examples/chinook/data.json").text()
+  guard @json.parse(source, preserve_number_repr=true) is Object(data) else { fail("expected Chinook dataset") }
+  let order = ["Artist","Album","Genre","MediaType","Track","Employee","Customer","Invoice","InvoiceLine","Playlist","PlaylistTrack"]
+  let primary : Map[String, Array[String]] = {
+    "Artist":["ArtistId"],"Album":["AlbumId"],"Genre":["GenreId"],"MediaType":["MediaTypeId"],
+    "Track":["TrackId"],"Employee":["EmployeeId"],"Customer":["CustomerId"],"Invoice":["InvoiceId"],
+    "InvoiceLine":["InvoiceLineId"],"Playlist":["PlaylistId"],"PlaylistTrack":["PlaylistId","TrackId"],
+  }
+  let references : Map[String, Array[(String,String,String)]] = {
+    "Album":[("ArtistId","Artist","ArtistId")],
+    "Track":[("AlbumId","Album","AlbumId"),("GenreId","Genre","GenreId"),("MediaTypeId","MediaType","MediaTypeId")],
+    "Employee":[("ReportsTo","Employee","EmployeeId")],
+    "Customer":[("SupportRepId","Employee","EmployeeId")],
+    "Invoice":[("CustomerId","Customer","CustomerId")],
+    "InvoiceLine":[("InvoiceId","Invoice","InvoiceId"),("TrackId","Track","TrackId")],
+    "PlaylistTrack":[("PlaylistId","Playlist","PlaylistId"),("TrackId","Track","TrackId")],
+  }
+  let tables : Array[Json] = []
+  for name in order {
+    guard data.get(name) is Some(Array(rows)) && !rows.is_empty() else { fail("missing/nonempty source table") }
+    let refs = references.get(name).unwrap_or([])
+    guard rows[0] is Object(first) else { fail("expected source row") }
+    let columns : Array[Json] = []
+    for column, _ in first {
+      let mut nullable = false
+      let mut kind = ""
+      for row in rows {
+        guard row is Object(row) else { fail("expected row") }
+        guard row.get(column) is Some(value) else { fail("missing source cell") }
+        let observed = match value {
+          Null => { nullable = true; "" }
+          String(_) => "text"
+          Number(_, repr=Some(s)) => if s.contains(".") || s.contains("e") || s.contains("E") { "decimal" } else { "integer" }
+          _ => { fail("unsupported source type"); "" }
+        }
+        if !observed.is_empty() {
+          if kind.is_empty() { kind = observed }
+          else if kind != observed {
+            if (kind == "integer" && observed == "decimal") || (kind == "decimal" && observed == "integer") { kind = "decimal" }
+            else { fail("mixed source types") }
+          }
+        }
+      }
+      if kind.is_empty() { kind = "text" }
+      let key_column = primary[name].contains(column) || refs.any(r => r.0 == column)
+      let rule : Json = if key_column && kind == "integer" {
+        {"reindex":1000}
+      } else if (name == "Customer" || name == "Employee") && column == "Email" {
+        {"token":{"domain":"contact-email","suffix":"@example.test"}}
+      } else if (name == "Customer" || name == "Employee") && kind == "text" && column != "HireDate" && column != "BirthDate" {
+        {"replace":"Test fixture"}
+      } else if name == "Invoice" && column.has_prefix("Billing") {
+        {"replace":"Test fixture"}
+      } else { Json::string("keep") }
+      columns.push({"name":Json::string(column),"type":Json::string(kind),"nullable":Json(nullable),"rule":rule})
+    }
+    let ref_json = refs.map(r => ({"columns":[Json::string(r.0)],"table":Json::string(r.1),"target":[Json::string(r.2)]} : Json))
+    tables.push({"name":Json::string(name),"columns":Json::array(columns),"primary":Json(primary[name]),"references":Json::array(ref_json)})
+  }
+  if data.length() != order.length() { fail("unreviewed source tables") }
+  let policy : Json = {"max_rows":100000,"max_input_units":16000000,"tables":Json::array(tables)}
+  @fs.write_file("examples/chinook/policy.json", policy.stringify(indent=2) + "\n")
+  println("Wrote policy for all 11 Chinook tables; inspect the explicit column rules before reuse.")
+}

@@ -1,0 +1,6 @@
+**/_build/
+/.mooncakes/
+/.moon/
+/.DS_Store
+/local/
+*.pending

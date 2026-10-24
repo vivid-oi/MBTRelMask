@@ -1,0 +1,17 @@
+# Chinook
+
+`data.json` 是上游原文件，未删行或抽样：
+
+- 来源：https://github.com/lerocha/chinook-database
+- 固定提交：`7f67772503d71ba90f19283c38e93923addb43fa`
+- 原路径：`ChinookDatabase/DataSources/ChinookData.json`
+- SHA-256：`2998161de437518e3447e779c7ce7418f081895e388081bff315f3c258752d8c`
+- MIT 许可文本保留在同目录 `LICENSE.md`。
+
+媒体资料来自原作者的 iTunes 库；客户、员工和销售资料是上游构造的测试数据。这不是生产数据，也不能用本示例证明真实个人信息已经匿名。
+
+`policy.json` 使用全部 11 张表和公开关系模型，包括员工自引用和 PlaylistTrack 复合主键。可用 `moon run dev/chinook_policy.mbtx` 重建，再审阅明确的列策略。
+
+演示修改 ID 与引用、客户/员工联系信息、账单地址；保留交易时间、金额、曲目和数量。它展示关系与保真性，不代表这些保留字段在所有真实场景中都不敏感。
+
+`moon run dev/verify.mbtx -- native` 真正调用 CLI，逐表比较行/列数量、金额和时间，并独立遍历客户→发票→明细引用。

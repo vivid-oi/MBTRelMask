@@ -1,0 +1,698 @@
+{
+  "max_rows": 100000,
+  "max_input_units": 16000000,
+  "tables": [
+    {
+      "name": "Artist",
+      "columns": [
+        {
+          "name": "ArtistId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "Name",
+          "type": "text",
+          "nullable": false,
+          "rule": "keep"
+        }
+      ],
+      "primary": [
+        "ArtistId"
+      ],
+      "references": []
+    },
+    {
+      "name": "Album",
+      "columns": [
+        {
+          "name": "AlbumId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "Title",
+          "type": "text",
+          "nullable": false,
+          "rule": "keep"
+        },
+        {
+          "name": "ArtistId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        }
+      ],
+      "primary": [
+        "AlbumId"
+      ],
+      "references": [
+        {
+          "columns": [
+            "ArtistId"
+          ],
+          "table": "Artist",
+          "target": [
+            "ArtistId"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Genre",
+      "columns": [
+        {
+          "name": "GenreId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "Name",
+          "type": "text",
+          "nullable": false,
+          "rule": "keep"
+        }
+      ],
+      "primary": [
+        "GenreId"
+      ],
+      "references": []
+    },
+    {
+      "name": "MediaType",
+      "columns": [
+        {
+          "name": "MediaTypeId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "Name",
+          "type": "text",
+          "nullable": false,
+          "rule": "keep"
+        }
+      ],
+      "primary": [
+        "MediaTypeId"
+      ],
+      "references": []
+    },
+    {
+      "name": "Track",
+      "columns": [
+        {
+          "name": "TrackId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "Name",
+          "type": "text",
+          "nullable": false,
+          "rule": "keep"
+        },
+        {
+          "name": "AlbumId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "MediaTypeId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "GenreId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "Composer",
+          "type": "text",
+          "nullable": false,
+          "rule": "keep"
+        },
+        {
+          "name": "Milliseconds",
+          "type": "integer",
+          "nullable": false,
+          "rule": "keep"
+        },
+        {
+          "name": "Bytes",
+          "type": "integer",
+          "nullable": false,
+          "rule": "keep"
+        },
+        {
+          "name": "UnitPrice",
+          "type": "decimal",
+          "nullable": false,
+          "rule": "keep"
+        }
+      ],
+      "primary": [
+        "TrackId"
+      ],
+      "references": [
+        {
+          "columns": [
+            "AlbumId"
+          ],
+          "table": "Album",
+          "target": [
+            "AlbumId"
+          ]
+        },
+        {
+          "columns": [
+            "GenreId"
+          ],
+          "table": "Genre",
+          "target": [
+            "GenreId"
+          ]
+        },
+        {
+          "columns": [
+            "MediaTypeId"
+          ],
+          "table": "MediaType",
+          "target": [
+            "MediaTypeId"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Employee",
+      "columns": [
+        {
+          "name": "EmployeeId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "LastName",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "FirstName",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "Title",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "ReportsTo",
+          "type": "integer",
+          "nullable": true,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "BirthDate",
+          "type": "text",
+          "nullable": false,
+          "rule": "keep"
+        },
+        {
+          "name": "HireDate",
+          "type": "text",
+          "nullable": false,
+          "rule": "keep"
+        },
+        {
+          "name": "Address",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "City",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "State",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "Country",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "PostalCode",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "Phone",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "Fax",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "Email",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "token": {
+              "domain": "contact-email",
+              "suffix": "@example.test"
+            }
+          }
+        }
+      ],
+      "primary": [
+        "EmployeeId"
+      ],
+      "references": [
+        {
+          "columns": [
+            "ReportsTo"
+          ],
+          "table": "Employee",
+          "target": [
+            "EmployeeId"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Customer",
+      "columns": [
+        {
+          "name": "CustomerId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "FirstName",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "LastName",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "Company",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "Address",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "City",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "State",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "Country",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "PostalCode",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "Phone",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "Fax",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "Email",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "token": {
+              "domain": "contact-email",
+              "suffix": "@example.test"
+            }
+          }
+        },
+        {
+          "name": "SupportRepId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        }
+      ],
+      "primary": [
+        "CustomerId"
+      ],
+      "references": [
+        {
+          "columns": [
+            "SupportRepId"
+          ],
+          "table": "Employee",
+          "target": [
+            "EmployeeId"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Invoice",
+      "columns": [
+        {
+          "name": "InvoiceId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "CustomerId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "InvoiceDate",
+          "type": "text",
+          "nullable": false,
+          "rule": "keep"
+        },
+        {
+          "name": "BillingAddress",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "BillingCity",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "BillingState",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "BillingCountry",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "BillingPostalCode",
+          "type": "text",
+          "nullable": false,
+          "rule": {
+            "replace": "Test fixture"
+          }
+        },
+        {
+          "name": "Total",
+          "type": "decimal",
+          "nullable": false,
+          "rule": "keep"
+        }
+      ],
+      "primary": [
+        "InvoiceId"
+      ],
+      "references": [
+        {
+          "columns": [
+            "CustomerId"
+          ],
+          "table": "Customer",
+          "target": [
+            "CustomerId"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "InvoiceLine",
+      "columns": [
+        {
+          "name": "InvoiceLineId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "InvoiceId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "TrackId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "UnitPrice",
+          "type": "decimal",
+          "nullable": false,
+          "rule": "keep"
+        },
+        {
+          "name": "Quantity",
+          "type": "integer",
+          "nullable": false,
+          "rule": "keep"
+        }
+      ],
+      "primary": [
+        "InvoiceLineId"
+      ],
+      "references": [
+        {
+          "columns": [
+            "InvoiceId"
+          ],
+          "table": "Invoice",
+          "target": [
+            "InvoiceId"
+          ]
+        },
+        {
+          "columns": [
+            "TrackId"
+          ],
+          "table": "Track",
+          "target": [
+            "TrackId"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Playlist",
+      "columns": [
+        {
+          "name": "PlaylistId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "Name",
+          "type": "text",
+          "nullable": false,
+          "rule": "keep"
+        }
+      ],
+      "primary": [
+        "PlaylistId"
+      ],
+      "references": []
+    },
+    {
+      "name": "PlaylistTrack",
+      "columns": [
+        {
+          "name": "PlaylistId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        },
+        {
+          "name": "TrackId",
+          "type": "integer",
+          "nullable": false,
+          "rule": {
+            "reindex": 1000
+          }
+        }
+      ],
+      "primary": [
+        "PlaylistId",
+        "TrackId"
+      ],
+      "references": [
+        {
+          "columns": [
+            "PlaylistId"
+          ],
+          "table": "Playlist",
+          "target": [
+            "PlaylistId"
+          ]
+        },
+        {
+          "columns": [
+            "TrackId"
+          ],
+          "table": "Track",
+          "target": [
+            "TrackId"
+          ]
+        }
+      ]
+    }
+  ]
+}

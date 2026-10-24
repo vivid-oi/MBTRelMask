@@ -1,0 +1,13 @@
+import {
+  "vivid-oi/relmask/relmask" @engine,
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/stdio",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/buffer",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "+wasm+native"

@@ -1,0 +1,31 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vivid-oi/relmask/relmask"
+
+// Values
+
+// Errors
+pub(all) suberror MaskError {
+  Invalid(code~ : String, location~ : String)
+}
+pub fn MaskError::message(Self) -> String
+pub fn MaskError::output(Self, &Logger) -> Unit
+pub fn MaskError::to_string(Self) -> String
+pub impl Show for MaskError
+
+// Types and methods
+pub struct CheckedDataset {
+  // private fields
+}
+pub fn CheckedDataset::report_json(Self) -> String
+pub fn CheckedDataset::to_json(Self) -> String
+
+pub struct Plan {
+  // private fields
+}
+pub fn Plan::parse(String) -> Self raise MaskError
+pub fn Plan::transform(Self, String, String) -> CheckedDataset raise MaskError
+pub fn Plan::validate(Self, String) -> String raise MaskError
+
+// Type aliases
+
+// Traits
