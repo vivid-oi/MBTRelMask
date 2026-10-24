@@ -10,6 +10,7 @@ test {
   let data =
     #|{"users":[{"id":7}]}
   let plan = @relmask.Plan::parse(source)
+  assert_true(plan.diagnose(data).is_valid())
   let checked = plan.transform(data, "example-only-key-at-least-32-bytes")
   assert_eq(checked.to_json(), "{\"users\":[{\"id\":100}]}")
   let bundle = checked.bundle_json()

@@ -1,0 +1,41 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/shell",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn main {
+  let args = @env.args()
+  let target = if args.length() > 1 { args[1] } else { "wasm" }
+  let moon = if args.length() > 2 { args[2] } else { "moon" }
+  let directory = @fs.tmpdir(prefix="relmask-audit-")
+  defer {
+    for name in @fs.readdir(directory[:]) { let path = directory + "/" + name; @fs.remove(path[:]) }
+    @fs.rmdir(directory[:])
+  }
+  let prefix = ["run","--frozen","--target",target,"apps/relmask","--"]
+  let policy = "examples/chinook/policy.json"
+  let valid = @shell.Cmd(moon,prefix + ["diagnose",policy,"examples/chinook/data.json"]).output()
+  valid.check()
+  guard @json.parse(valid.stdout()) is {"valid":True,"constraints_checked":True,"issues":Array([]),..} else { fail("valid audit") }
+  guard @json.parse(@fs.read_file("examples/chinook/data.json").text(),preserve_number_repr=true) is Object(data) && data.get("Artist") is Some(Array(artists)) && data.get("Genre") is Some(Array(genres)) else { fail("shape") }
+  data["Artist"] = Json::array(Array::makei(artists.length()-1,i => artists[i+1]))
+  genres.push(genres[0])
+  let path = directory + "/invalid.json"
+  @fs.write_file(path[:],Json::object(data).stringify())
+  let invalid = @shell.Cmd(moon,prefix + ["diagnose",policy,path]).output()
+  if invalid.exit_code() != 1 { fail("invalid audit exit") }
+  guard @json.parse(invalid.stdout()) is {"valid":False,"constraints_checked":True,"issues":Array(issues),..} else { fail("audit phase") }
+  if !issues.any(issue => issue is {"code":String("duplicate_key"),..}) || !issues.any(issue => issue is {"code":String("orphan_reference"),..}) { fail("missing independent findings") }
+  if invalid.stdout().contains("AC/DC") { fail("audit leaked a source value") }
+  @fs.write_file(path[:],"{}")
+  let shape = @shell.Cmd(moon,prefix + ["diagnose",policy,path]).output()
+  if shape.exit_code() != 1 { fail("shape audit exit") }
+  guard @json.parse(shape.stdout()) is {"valid":False,"constraints_checked":False,..} else { fail("shape phase misreported") }
+  @shell.Cmd(moon,prefix + ["diagnose",policy,"examples/chinook/data.json"],stdout=Discard).run()
+  println("Audit workflow: full Chinook valid; duplicate Genre and orphan Albums found together; shape phase, non-leakage and recovery checked")
+}

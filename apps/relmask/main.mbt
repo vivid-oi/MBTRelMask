@@ -35,6 +35,7 @@ async fn read_text(path : String, maximum : Int64) -> String {
 async fn execute() -> Unit {
   let args = @env.args()
   if args.length() == 2 && (args[1] == "--help" || args[1] == "help") {
+    @stdio.stdout.write("relmask diagnose POLICY DATA\n")
     @stdio.stdout.write(
       "relmask compare POLICY BEFORE_BUNDLE AFTER_BUNDLE (exit 3 if different)\n",
     )
@@ -49,7 +50,10 @@ async fn execute() -> Unit {
     )
     return
   }
-  if !((args.length() == 4 && ["check", "mask", "verify"].contains(args[1])) ||
+  if !((
+      args.length() == 4 &&
+      ["check", "mask", "verify", "diagnose"].contains(args[1])
+    ) ||
     (
       args.length() == 5 &&
       ["export", "export-csv", "unpack-csv", "compare"].contains(args[1])
@@ -81,7 +85,13 @@ async fn execute() -> Unit {
       64_000_000L
     },
   )
-  if args[1] == "compare" {
+  if args[1] == "diagnose" {
+    let result = policy.diagnose(input)
+    @stdio.stdout.write(result.to_json() + "\n")
+    if !result.is_valid() {
+      exit_process(1)
+    }
+  } else if args[1] == "compare" {
     let a = policy.verify_bundle(input)
     let b = policy.verify_bundle(read_text(args[4], 128_000_000L))
     let difference = policy.compare_datasets(a.to_json(), b.to_json())

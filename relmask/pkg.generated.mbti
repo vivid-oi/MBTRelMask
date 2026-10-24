@@ -26,6 +26,12 @@ pub struct DatasetDiff {
 pub fn DatasetDiff::is_empty(Self) -> Bool
 pub fn DatasetDiff::to_json(Self) -> String
 
+pub struct Diagnostics {
+  // private fields
+}
+pub fn Diagnostics::is_valid(Self) -> Bool
+pub fn Diagnostics::to_json(Self) -> String
+
 pub struct MappedDataset {
   // private fields
 }
@@ -36,6 +42,7 @@ pub struct Plan {
   // private fields
 }
 pub fn Plan::compare_datasets(Self, String, String) -> DatasetDiff raise MaskError
+pub fn Plan::diagnose(Self, String, max_issues? : Int32) -> Diagnostics raise MaskError
 pub fn Plan::export_csv(Self, String) -> Map[String, String] raise MaskError
 pub fn Plan::import_csv(Self, Map[String, String]) -> String raise MaskError
 pub fn Plan::parse(String) -> Self raise MaskError
