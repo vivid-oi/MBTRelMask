@@ -23,6 +23,8 @@ pub fn CheckedDataset::to_json(Self) -> String
 pub struct Plan {
   // private fields
 }
+pub fn Plan::export_csv(Self, String) -> Map[String, String] raise MaskError
+pub fn Plan::import_csv(Self, Map[String, String]) -> String raise MaskError
 pub fn Plan::parse(String) -> Self raise MaskError
 pub fn Plan::subset(Self, String, String) -> String raise MaskError
 pub fn Plan::transform(Self, String, String) -> CheckedDataset raise MaskError

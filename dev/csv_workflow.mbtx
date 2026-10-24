@@ -1,0 +1,79 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/shell",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn main {
+  let args = @env.args()
+  let target = if args.length() > 1 { args[1] } else { "wasm" }
+  let moon = if args.length() > 2 { args[2] } else { "moon" }
+  let directory = @fs.tmpdir(prefix="relmask-csv-")
+  defer {
+    // Nonrecursive cleanup of the fresh test directory and its own output folders.
+    for name in @fs.readdir(directory[:]) {
+      let path = directory + "/" + name
+      if @fs.kind(path[:]) == Directory {
+        for file in @fs.readdir(path[:]) { let child = path + "/" + file; @fs.remove(child[:]) }
+        @fs.rmdir(path[:])
+      } else { @fs.remove(path[:]) }
+    }
+    @fs.rmdir(directory[:])
+  }
+  let prefix = ["run","--frozen","--target",target,"apps/relmask","--"]
+  let key = {"RELMASK_KEY":"public-example-key-never-use-for-private-data"}
+  let source_bundle = directory + "/source.bundle.json"
+  let tables_directory = directory + "/tables"
+  let output_bundle = directory + "/csv.bundle.json"
+  let policy = "examples/chinook/policy.json"
+  @shell.Cmd(moon,prefix + ["export",policy,"examples/chinook/data.json",source_bundle],env=key,stderr=Discard).run()
+  let unpack_args = prefix + ["unpack-csv",policy,source_bundle,tables_directory]
+  @shell.Cmd(moon,unpack_args,env={"RELMASK_KEY":""},stderr=Discard).run()
+  let manifest_path = tables_directory + "/manifest.json"
+  let original_manifest = @fs.read_file(manifest_path[:]).text()
+  guard @json.parse(original_manifest) is Object(manifest) else { fail("manifest shape") }
+  if manifest.length() != 11 { fail("missing CSV tables") }
+  @shell.Cmd(moon,prefix + ["export-csv",policy,tables_directory,output_bundle],env=key,stderr=Discard).run()
+  @shell.Cmd(moon,prefix + ["verify",policy,output_bundle],env={"RELMASK_KEY":""}).run()
+  guard @json.parse(@fs.read_file(output_bundle[:]).text()) is {"data":String(encoded),..} else { fail("bundle shape") }
+  guard @json.parse(encoded,preserve_number_repr=true) is Object(after) else { fail("dataset shape") }
+  guard @json.parse(@fs.read_file("examples/chinook/data.json").text(),preserve_number_repr=true) is Object(before) else { fail("source shape") }
+  let mut count = 0
+  for name, value in before {
+    guard value is Array(old_rows) && after.get(name) is Some(Array(new_rows)) else { fail("table loss") }
+    if old_rows.length() != new_rows.length() { fail("row loss") }
+    count += new_rows.length()
+    for ri, old_row in old_rows {
+      guard old_row is Object(old_columns) && new_rows[ri] is Object(new_columns) else { fail("row shape") }
+      if old_columns.length() != new_columns.length() { fail("column loss") }
+      for column in ["UnitPrice","Total","InvoiceDate","Quantity"] {
+        if old_columns.get(column) is Some(value) {
+          guard new_columns.get(column) is Some(actual) else { fail("missing business column") }
+          if actual.stringify() != value.stringify() { fail("business value changed") }
+        }
+      }
+    }
+  }
+  let again = @shell.Cmd(moon,unpack_args,stderr=Discard).output()
+  if again.exit_code() != 1 || @fs.read_file(manifest_path[:]).text() != original_manifest { fail("CSV directory overwritten") }
+  let blocked = directory + "/blocked"
+  @fs.write_file(blocked[:],"keep")
+  let failure = @shell.Cmd(moon,prefix + ["unpack-csv",policy,source_bundle,blocked],stderr=Discard).output()
+  if failure.exit_code() != 1 || @fs.read_file(blocked[:]).text() != "keep" { fail("file destination overwritten") }
+  for name in @fs.readdir(directory[:]) { if name.has_suffix(".pending") { fail("CSV failure leaked staging directory") } }
+  @fs.write_file(manifest_path[:],"{\"Artist\":\"../source.bundle.json\"}")
+  let invalid_destination = directory + "/invalid.bundle.json"
+  let invalid = @shell.Cmd(moon,prefix + ["export-csv",policy,tables_directory,invalid_destination],env=key).output()
+  if invalid.exit_code() != 1 || !invalid.stderr().contains("csv_manifest_filename") || @fs.exists(invalid_destination[:]) { fail("unsafe manifest accepted") }
+  @fs.write_file(manifest_path[:],original_manifest)
+  let recovered = directory + "/recovered.bundle.json"
+  @shell.Cmd(moon,prefix + ["export-csv",policy,tables_directory,recovered],env=key,stderr=Discard).run()
+  if @fs.read_file(recovered[:]).text() != @fs.read_file(output_bundle[:]).text() { fail("CSV recovery changed output") }
+  let tenant_bundle = directory + "/tenants.bundle.json"
+  @shell.Cmd(moon,prefix + ["export-csv","examples/tenants/policy.json","examples/tenants/csv",tenant_bundle],env=key,stderr=Discard).run()
+  println("CSV workflow: " + count.to_string() + " Chinook rows, exact business values, tenant composite keys, no-clobber, manifest rejection, cleanup and recovery checked")
+}

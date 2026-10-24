@@ -1,6 +1,6 @@
 # MBTRelMask
 
-把现有多表 JSON 数据变成仍可联表使用的测试数据：关联键一起替换，未指定修改的值保留，主键、外键和唯一约束在转换前后都检查。
+把现有多表 JSON / CSV 数据变成仍可联表使用的测试数据：关联键一起替换，未指定修改的值保留，主键、外键和唯一约束在转换前后都检查。
 
 适合已经导出的故障复现包和 CI 样本。输入是数据和显式策略，不连接数据库，不扫描猜测哪些字段敏感。
 
@@ -59,7 +59,7 @@ Chinook 示例保留全部 11 张表，重编号关联整数 ID，替换客户/�
 
 每列都要选择 `keep`、`null`、`replace`、`token` 或 `reindex`。相互引用的列必须使用相同规则；具体格式及错误语义见 [数据契约](docs/contract.md)。
 
-库入口为 `vivid-oi/relmask/relmask`：`Plan::parse`、`Plan::validate`、`Plan::subset`、`Plan::transform`、`Plan::verify_bundle`；完成结果提供 `to_json`、`report_json`、`bundle_json`。[库示例](relmask/README.mbt.md)参与编译与测试。
+库入口为 `vivid-oi/relmask/relmask`：`Plan::parse`、`Plan::validate`、`Plan::subset`、`Plan::transform`、`Plan::verify_bundle`，以及多表 `import_csv` / `export_csv`；完成结果提供 `to_json`、`report_json`、`bundle_json`。[库示例](relmask/README.mbt.md)参与编译与测试。
 
 ## 当前边界
 
@@ -89,8 +89,10 @@ CI 在三个可移植后端运行核心测试，在 Linux、macOS、Windows 真�
 
 需要缩小故障样本时，`Plan::subset` 和 `export-subset POLICY DATA SEEDS DEST` 会保留指定记录及递归父依赖，然后可以继续替换和复核。见[关系裁剪](docs/subsets.md)。
 
+已有 CSV 导出时，`export-csv POLICY DIRECTORY DEST` 按目录清单读取全部表，验证关系并替换后生成 bundle；`unpack-csv POLICY BUNDLE DESTDIR` 复核后输出 CSV 文件和清单。保留精确数字、null 和空文本，支持多行字段。见 [CSV 契约与示例](docs/csv.md)。
+
 三套采用流程见[使用场景](docs/workflows.md)，文件格式和失败恢复见[导出契约](docs/bundles.md)。完整性摘要没有秘密，不能认证发布者；修改策略空白或换行也会改变指纹。文件中的变更数量无法在缺少原数据时独立证明。
 
-后续按实际采用需求推进 CSV 导入、跨批持久映射；这两项尚未实现。
+后续按实际采用需求推进跨批持久映射；该能力尚未实现。现有 CSV 只支持文档明确列出的方言和 null 约定。
 
 Apache-2.0。外部资源及许可见 [THIRD_PARTY.md](THIRD_PARTY.md)。

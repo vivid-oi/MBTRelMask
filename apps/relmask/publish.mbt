@@ -1,8 +1,5 @@
 ///|
-async fn publish(destination : String, content : String) -> Unit {
-  if @utf8.encode(content[:]).length() > 128_000_000 {
-    fail("bundle exceeds CLI byte budget")
-  }
+fn random_suffix() -> String raise {
   guard @env.rand(16) is Some(random) else {
     fail("random temporary name unavailable")
   }
@@ -12,7 +9,15 @@ async fn publish(destination : String, content : String) -> Unit {
     suffix.write_char(digits[b.to_int() >> 4])
     suffix.write_char(digits[b.to_int() & 15])
   }
-  let temporary = destination + "." + suffix.to_string() + ".pending"
+  suffix.to_string()
+}
+
+///|
+async fn publish(destination : String, content : String) -> Unit {
+  if @utf8.encode(content[:]).length() > 128_000_000 {
+    fail("bundle exceeds CLI byte budget")
+  }
+  let temporary = destination + "." + random_suffix() + ".pending"
   // Keep creation, sync and no-replace publication in a cancellation shield.
   // Process termination can still leave a private .pending file, never a partial DEST.
   @async.protect_from_cancel(() => {

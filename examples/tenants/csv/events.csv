@@ -1,0 +1,4 @@
+id,tenant,account,kind
+1,"north",7,"login"
+2,"south",7,"password_reset"
+3,\N,999,"unassigned"

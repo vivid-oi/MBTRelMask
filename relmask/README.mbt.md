@@ -18,5 +18,7 @@ test {
   assert_eq(received.report_json(), checked.report_json())
   let selected = plan.subset(data, "{\"users\":[{\"id\":7}]}")
   assert_eq(selected, data)
+  let csv_tables = plan.export_csv(received.to_json())
+  assert_eq(plan.import_csv(csv_tables), received.to_json())
 }
 ```

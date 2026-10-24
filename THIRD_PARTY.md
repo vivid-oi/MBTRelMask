@@ -7,6 +7,9 @@
 | Chinook | Complete public example dataset; unchanged source file and retained license | MIT, commit `7f67772503d71ba90f19283c38e93923addb43fa`, https://github.com/lerocha/chinook-database |
 | FIPS 180-4 | SHA-256 algorithm and standard constants; implementation written for this package | https://csrc.nist.gov/pubs/fips/180-4/upd1/final |
 | RFC 2104 and RFC 4231 | HMAC construction and conformance vectors 1, 2, 6 | RFC 4231 §4 permits use of vectors for conformance testing; https://www.rfc-editor.org/rfc/rfc4231 |
+| RFC 4180 | Reference for comma, quote and record boundaries; private CSV reader and test fixtures written for this package | No implementation or example text copied; https://www.rfc-editor.org/rfc/rfc4180 |
+
+NyaCSV's public API was inspected as ecosystem context (Apache-2.0, https://github.com/moonbit-community/NyaCSV). No NyaCSV code or tests are included. RelMask's private reader retains quote metadata for its explicit null marker; its public CSV boundary is a typed, relational dataset workflow.
 
 No Greenmask, Presidio, MoonFixture, MoonScrub or LunaSieve implementation or test code is included. They informed the project boundary: existing-data transformation with declared relational invariants, rather than text scanning or synthetic data generation.
 
