@@ -20,6 +20,12 @@ pub fn CheckedDataset::bundle_json(Self) -> String
 pub fn CheckedDataset::report_json(Self) -> String
 pub fn CheckedDataset::to_json(Self) -> String
 
+pub struct DatasetDiff {
+  // private fields
+}
+pub fn DatasetDiff::is_empty(Self) -> Bool
+pub fn DatasetDiff::to_json(Self) -> String
+
 pub struct MappedDataset {
   // private fields
 }
@@ -29,6 +35,7 @@ pub fn MappedDataset::state_json(Self) -> String
 pub struct Plan {
   // private fields
 }
+pub fn Plan::compare_datasets(Self, String, String) -> DatasetDiff raise MaskError
 pub fn Plan::export_csv(Self, String) -> Map[String, String] raise MaskError
 pub fn Plan::import_csv(Self, Map[String, String]) -> String raise MaskError
 pub fn Plan::parse(String) -> Self raise MaskError

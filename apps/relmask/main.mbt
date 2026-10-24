@@ -36,6 +36,9 @@ async fn execute() -> Unit {
   let args = @env.args()
   if args.length() == 2 && (args[1] == "--help" || args[1] == "help") {
     @stdio.stdout.write(
+      "relmask compare POLICY BEFORE_BUNDLE AFTER_BUNDLE (exit 3 if different)\n",
+    )
+    @stdio.stdout.write(
       "relmask export-state POLICY DATA STATE_OR_DASH DESTDIR\n",
     )
     @stdio.stdout.write(
@@ -49,7 +52,7 @@ async fn execute() -> Unit {
   if !((args.length() == 4 && ["check", "mask", "verify"].contains(args[1])) ||
     (
       args.length() == 5 &&
-      ["export", "export-csv", "unpack-csv"].contains(args[1])
+      ["export", "export-csv", "unpack-csv", "compare"].contains(args[1])
     ) ||
     (args.length() == 6 && ["export-subset", "export-state"].contains(args[1])) ||
     (args.length() == 7 && args[1] == "export-aggregate")) {
@@ -72,13 +75,21 @@ async fn execute() -> Unit {
   }
   let input = read_text(
     args[3],
-    if args[1] == "verify" || args[1] == "unpack-csv" {
+    if ["verify", "unpack-csv", "compare"].contains(args[1]) {
       128_000_000L
     } else {
       64_000_000L
     },
   )
-  if args[1] == "check" {
+  if args[1] == "compare" {
+    let a = policy.verify_bundle(input)
+    let b = policy.verify_bundle(read_text(args[4], 128_000_000L))
+    let difference = policy.compare_datasets(a.to_json(), b.to_json())
+    @stdio.stdout.write(difference.to_json() + "\n")
+    if !difference.is_empty() {
+      exit_process(3)
+    }
+  } else if args[1] == "check" {
     @stdio.stdout.write(policy.validate(input) + "\n")
   } else if args[1] == "export-state" {
     let key = @env.get_env_var("RELMASK_KEY").unwrap_or("")

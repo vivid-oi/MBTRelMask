@@ -35,7 +35,7 @@ moon run apps/relmask --target native -- export examples/chinook/policy.json exa
 moon run apps/relmask --target native -- verify examples/chinook/policy.json sample.bundle.json
 ```
 
-需要纯数据时，`mask POLICY DATA` 在整个数据集验证成功后才向 stdout 写 JSON，报告写入 stderr。退出码：0 成功、1 数据/策略/I/O 错误、2 用法错误。`mask` 的 shell 重定向可能提前截断目标文件；持久导出推荐使用 `export`。
+需要纯数据时，`mask POLICY DATA` 在整个数据集验证成功后才向 stdout 写 JSON，报告写入 stderr。退出码：0 成功、1 数据/策略/I/O 错误、2 用法错误；compare 另以 3 表示发现变化。`mask` 的 shell 重定向可能提前截断目标文件；持久导出推荐使用 `export`。
 
 Chinook 示例保留全部 11 张表，重编号关联整数 ID，替换客户/员工联系方式，保留金额和交易时间。原数据中的个人信息本来就是虚构样本。来源、固定版本和校验和见 [示例说明](examples/chinook/README.md)。
 
@@ -96,5 +96,7 @@ CI 在三个可移植后端运行核心测试，在 Linux、macOS、Windows 真�
 三套采用流程见[使用场景](docs/workflows.md)，文件格式和失败恢复见[导出契约](docs/bundles.md)。完整性摘要没有秘密，不能认证发布者；修改策略空白或换行也会改变指纹。文件中的变更数量无法在缺少原数据时独立证明。
 
 需要增量样本稳定 ID 时，`transform_with_state` 和 `export-state POLICY DATA STATE_OR_DASH DESTDIR` 使用认证快照追加映射，已有 ID 不变。见[状态契约](docs/state.md)。状态须串行更新，不支持分叉合并。现有 CSV 只支持文档明确列出的方言和 null 约定。
+
+检查样本回归时，`compare POLICY BEFORE_BUNDLE AFTER_BUNDLE` 按完整主键匹配，输出不含数据值的新增/删除/字段变化计数；相同退出 0，变化退出 3。库提供 `compare_datasets`。见[比较契约](docs/comparison.md)。
 
 Apache-2.0。外部资源及许可见 [THIRD_PARTY.md](THIRD_PARTY.md)。

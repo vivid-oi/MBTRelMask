@@ -29,5 +29,10 @@ test {
     previous=batch.state_json(),
   )
   assert_eq(replay.dataset().to_json(), batch.dataset().to_json())
+  assert_true(
+    plan
+    .compare_datasets(batch.dataset().to_json(), replay.dataset().to_json())
+    .is_empty(),
+  )
 }
 ```

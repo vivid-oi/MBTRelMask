@@ -63,4 +63,18 @@ async fn main {
   if @fs.read_file(recovered_state[:]).text() != @fs.read_file(second_state[:]).text() { fail("state recovery changed mapping") }
   for name in @fs.readdir(directory[:]) { if name.has_suffix(".pending") { fail("state staging leaked") } }
   println("State workflow: all 15607 existing Chinook rows retain their mapped values after adding an artist; paired publication, no-clobber and recovery checked")
+  let same = @shell.Cmd(moon,prefix + ["compare",policy,a_path,a_path],env={"RELMASK_KEY":""}).output()
+  same.check()
+  guard @json.parse(same.stdout()) is {"equal":True,..} else { fail("equal bundle gate failed") }
+  let difference = @shell.Cmd(moon,prefix + ["compare",policy,a_path,b_path],env={"RELMASK_KEY":""}).output()
+  if difference.exit_code() != 3 { fail("changed bundle gate did not return 3: " + difference.exit_code().to_string()) }
+  guard @json.parse(difference.stdout()) is {"equal":False,"tables":Array(diffs),..} else { fail("diff shape") }
+  for row in diffs {
+    guard row is {"name":String(name),"added":Number(added,..),"removed":Number(removed,..),"changed":Number(changed,..),..} else { fail("diff table shape") }
+    if added != (if name == "Artist" { 1.0 } else { 0.0 }) || removed != 0.0 || changed != 0.0 { fail("incorrect real diff counts") }
+  }
+  if difference.stdout().contains("Incremental sample") || difference.stdout().contains("999999") { fail("diff leaked values") }
+  let rejected = @shell.Cmd(moon,prefix + ["compare",policy,a_path,bad_state],env={"RELMASK_KEY":""}).output()
+  if rejected.exit_code() != 1 || rejected.stdout() != "" { fail("invalid bundle produced a diff") }
+  println("Comparison workflow: unchanged -> 0, one added Artist -> 3, corrupt bundle -> 1; value-free counts checked")
 }

@@ -8,7 +8,7 @@ readme = "README.md"
 
 repository = "https://github.com/vivid-oi/MBTRelMask"
 
-description = "Constraint-checked pseudonymization of existing relational JSON datasets."
+description = "Constraint-checked relational test-data masking, stable mappings and comparison."
 
 keywords = [ "test-data", "pseudonymization", "foreign-key", "json" ]
 
