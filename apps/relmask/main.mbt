@@ -36,6 +36,9 @@ async fn execute() -> Unit {
   let args = @env.args()
   if args.length() == 2 && (args[1] == "--help" || args[1] == "help") {
     @stdio.stdout.write(
+      "relmask export-sample POLICY DATA REQUEST SEED DEST [OPTIONS]\n",
+    )
+    @stdio.stdout.write(
       "relmask export-selected POLICY DATA SELECTOR DEST [OPTIONS]\n",
     )
     @stdio.stdout.write(
@@ -75,8 +78,9 @@ async fn execute() -> Unit {
     ) ||
     (
       args.length() == 7 &&
-      ["export-aggregate", "export-selected"].contains(args[1])
-    )) {
+      ["export-aggregate", "export-selected", "export-sample"].contains(args[1])
+    ) ||
+    (args.length() == 8 && args[1] == "export-sample")) {
     @stdio.stderr.write(
       "invalid arguments: run relmask --help for command forms\n",
     )
@@ -102,7 +106,25 @@ async fn execute() -> Unit {
       64_000_000L
     },
   )
-  if args[1] == "export-selected" {
+  if args[1] == "export-sample" {
+    let request = read_text(args[4], 4_000_000L)
+    let selected = if args.length() == 8 {
+      policy.sample(
+        input,
+        request,
+        args[5],
+        options=read_text(args[7], 1_000_000L),
+      )
+    } else {
+      policy.sample(input, request, args[5])
+    }
+    let checked = policy.transform(
+      selected,
+      @env.get_env_var("RELMASK_KEY").unwrap_or(""),
+    )
+    publish(args[6], checked.bundle_json())
+    @stdio.stderr.write(checked.report_json() + "\n")
+  } else if args[1] == "export-selected" {
     let selector = read_text(args[4], 4_000_000L)
     let selected = if args.length() == 7 {
       policy.subset_where(

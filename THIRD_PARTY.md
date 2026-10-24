@@ -20,3 +20,5 @@ No Greenmask, Presidio, MoonFixture, MoonScrub or LunaSieve implementation or te
 The SHA-256 empty/abc/multi-block/million-a digests are standard conformance values. Other boundary fixtures in the tests were constructed for this repository. Passing these vectors is not an independent cryptographic audit.
 
 The private decimal predicate comparator, signed exponent digit arithmetic and associated tests were written in this repository. No external decimal implementation or test corpus is included. It uses the existing MoonBit core JSON number representations; its normalization is used only for comparison and does not rewrite dataset values.
+
+Deterministic sampling reuses this repository's SHA-256 and relational closure implementations. The bounded max heap, sorting reference tests and public request fixtures were written here; no external sampler or sampling test corpus is included. The Chinook workflow retains the existing upstream fixture and its MIT notice.

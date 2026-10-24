@@ -54,6 +54,7 @@ pub fn Plan::export_sql(Self, String, schema? : String, max_output_units? : Int3
 pub fn Plan::import_csv(Self, Map[String, String]) -> String raise MaskError
 pub fn Plan::merge_datasets(Self, String, String) -> MergedDataset raise MaskError
 pub fn Plan::parse(String) -> Self raise MaskError
+pub fn Plan::sample(Self, String, String, String, options? : String) -> String raise MaskError
 pub fn Plan::subset(Self, String, String, options? : String) -> String raise MaskError
 pub fn Plan::subset_where(Self, String, String, options? : String) -> String raise MaskError
 pub fn Plan::transform(Self, String, String) -> CheckedDataset raise MaskError

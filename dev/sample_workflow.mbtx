@@ -1,0 +1,106 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/shell",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn main {
+  let args = @env.args()
+  let target = if args.length()>1 { args[1] } else { "wasm" }
+  let moon = if args.length()>2 { args[2] } else { "moon" }
+  let directory = @fs.tmpdir(prefix="relmask-sample-")
+  defer {
+    for name in @fs.readdir(directory[:]) { let path=directory+"/"+name; @fs.remove(path[:]) }
+    @fs.rmdir(directory[:])
+  }
+  let source = "examples/chinook/data.json"
+  // Keep this public fixture's integer IDs in a temporary policy so expected
+  // records can be checked independently against the original data.
+  guard @json.parse(@fs.read_file("examples/chinook/policy.json").text(),preserve_number_repr=true) is Object(config) &&
+    config.get("tables") is Some(Array(schema)) else { fail("policy shape") }
+  for ti,table in schema {
+    guard table is Object(table) && table.get("columns") is Some(Array(columns)) else { fail("policy table") }
+    for ci,column in columns {
+      guard column is Object(column) else { fail("policy column") }
+      if column.get("rule") is Some({"reindex":_,..}) { column["rule"]=Json::string("keep") }
+      columns[ci]=Json::object(column)
+    }
+    table["columns"]=Json::array(columns)
+    schema[ti]=Json::object(table)
+  }
+  config["tables"]=Json::array(schema)
+  let policy = directory+"/policy.json"
+  @fs.write_file(policy[:],Json::object(config).stringify())
+  let prefix = ["run","--frozen","--target",target,"apps/relmask","--"]
+  let key = {"RELMASK_KEY":"public-example-key-never-use-for-private-data"}
+  let request = "examples/chinook/sample.json"
+  let options = "examples/chinook/select-options.json"
+  let seed = "chinook-demo-1"
+  let first = directory+"/first.bundle.json"
+  let again = directory+"/again.bundle.json"
+  let base = prefix+["export-sample",policy,source,request,seed]
+  let run = @shell.Cmd(moon,base+[first,options],env=key).output()
+  if run.exit_code()!=0 { fail("sample command failed: "+run.stderr()) }
+  @shell.Cmd(moon,base+[again,options],env=key,stderr=Discard).run()
+  let saved = @fs.read_file(first[:]).text()
+  if saved!=@fs.read_file(again[:]).text() { fail("sample reproducibility") }
+  @shell.Cmd(moon,prefix+["verify",policy,first],stdout=Discard).run()
+  guard @json.parse(@fs.read_file(source).text(),preserve_number_repr=true) is Object(original) &&
+    original.get("Invoice") is Some(Array(invoices)) &&
+    original.get("InvoiceLine") is Some(Array(lines)) else { fail("fixture shape") }
+  guard @json.parse(saved) is {"data":String(data),..} &&
+    @json.parse(data,preserve_number_repr=true) is {"Invoice":Array(actual),"InvoiceLine":Array(details),..} else { fail("sample shape") }
+  if actual.length()!=5 { fail("sample seed count") }
+  let lookup : Map[String,Json] = Map([])
+  for row in invoices { guard row is {"InvoiceId":id,..} else { fail("invoice key") }; lookup[id.stringify()]=row }
+  let ids : Map[String,Bool] = Map([])
+  for row in actual {
+    guard row is Object(row) else { fail("sample invoice") }
+    let id = row["InvoiceId"].stringify()
+    guard lookup.get(id) is Some(Object(before)) else { fail("sample invented key") }
+    for field in ["InvoiceDate","Total"] {
+      if row[field].stringify()!=before[field].stringify() { fail("sample changed business values") }
+    }
+    ids[id]=true
+  }
+  let expected_lines = lines.filter(row=>{
+    guard row is {"InvoiceId":id,..} else { abort("line key") }
+    ids.contains(id.stringify())
+  })
+  if details.length()!=expected_lines.length() { fail("sample omitted line items") }
+  for i,row in details {
+    guard row is Object(row) && expected_lines[i] is Object(before) else { fail("sample line") }
+    for field in ["InvoiceLineId","InvoiceId","UnitPrice","Quantity"] {
+      if row[field].stringify()!=before[field].stringify() { fail("sample line value") }
+    }
+  }
+  for name,table in original {
+    guard table is Array(rows) else { fail("fixture table") }
+    original[name]=Json::array(rows.rev())
+  }
+  let reversed = directory+"/reversed.json"
+  @fs.write_file(reversed[:],Json::object(original).stringify())
+  let reordered = directory+"/reordered.bundle.json"
+  @shell.Cmd(moon,prefix+["export-sample",policy,reversed,request,seed,reordered,options],env=key,stderr=Discard).run()
+  @shell.Cmd(moon,prefix+["compare",policy,first,reordered],stdout=Discard).run()
+  let collision = @shell.Cmd(moon,base+[first,options],env=key).output()
+  if collision.exit_code()!=1 || @fs.read_file(first[:]).text()!=saved { fail("sample overwrote destination") }
+  let absent = directory+"/recovered.bundle.json"
+  let bad_request = directory+"/bad-request.json"
+  @fs.write_file(bad_request[:],"{\"Invoice\":413}")
+  let bad = @shell.Cmd(moon,prefix+["export-sample",policy,source,bad_request,seed,absent],env=key).output()
+  if bad.exit_code()!=1 || !bad.stderr().contains("sample_population_too_small") || @fs.exists(absent[:]) { fail("sample population refusal") }
+  let small = directory+"/small-options.json"
+  @fs.write_file(small[:],"{\"max_rows\":1}")
+  let limited = @shell.Cmd(moon,base+[absent,small],env=key).output()
+  if limited.exit_code()!=1 || !limited.stderr().contains("subset_row_limit") || @fs.exists(absent[:]) { fail("sample truncated closure") }
+  @shell.Cmd(moon,base+[absent],env=key,stderr=Discard).run()
+  guard @json.parse(@fs.read_file(absent[:]).text()) is {"data":String(parents),..} &&
+    @json.parse(parents) is {"Invoice":Array([_,_,_,_,_]),"InvoiceLine":Array([]),..} else { fail("sample default descendants") }
+  @shell.Cmd(moon,prefix+["verify",policy,absent],stdout=Discard).run()
+  println("Sample workflow: 5 reproducible Chinook invoices, "+details.length().to_string()+" full line items; row-order invariance, original business values, no-clobber, budget/population refusal and recovery checked")
+}

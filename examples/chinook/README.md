@@ -19,3 +19,5 @@
 select-2022.json 与 select-options.json 是本仓库编写的条件/关系配置，选择 2022 年的 83 张发票、455 条明细及父依赖。运行方法见[条件选样](../../docs/selection.md)，自动验证为 dev/selection_workflow.mbtx；不改动上游 data.json。
 
 select-high-total.json 选择 Total >= 20.00 的 4 张发票；配合 select-options.json 保留全部 56 条明细。自动验证以整数分独立计算期望集合，金额筛选不使用 Double，输出保留原始数字表示。新增配置和验证代码使用本仓库 Apache-2.0 许可。
+
+sample.json 指定抽取 5 张发票；公开种子 chinook-demo-1 配合 select-options.json 得到全部 25 条明细及父依赖。命令及稳定性边界见[关系抽样](../../docs/sampling.md)，自动验证为 dev/sample_workflow.mbtx。新增配置与代码使用仓库 Apache-2.0 许可，原始数据与 MIT 许可不变。

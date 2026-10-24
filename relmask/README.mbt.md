@@ -23,6 +23,7 @@ test {
     data, "{\"users\":[{\"id\":{\"gte\":7,\"lt\":8}}]}",
   )
   assert_eq(selected_where, selected)
+  assert_eq(plan.sample(data, "{\"users\":1}", "public-example-seed"), data)
   let merged = plan.merge_datasets(data, selected)
   assert_eq(merged.to_json(), data)
   assert_true(merged.report_json().contains("\"reused\":1"))
