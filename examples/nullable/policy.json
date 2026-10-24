@@ -1,0 +1,5 @@
+{"tables":[{"name":"aliases","columns":[
+  {"name":"id","type":"integer","rule":{"reindex":1000}},
+  {"name":"tenant","type":"text","rule":{"token":{"domain":"tenant"}}},
+  {"name":"alias","type":"text","nullable":true,"rule":{"token":{"domain":"alias"}}}
+],"primary":["id"],"unique":[{"columns":["tenant","alias"],"nulls":"not_distinct"}]}]}

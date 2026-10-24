@@ -58,11 +58,17 @@ priv struct Reference {
 }
 
 ///|
+priv struct UniqueSpec {
+  columns : Array[String]
+  nulls_equal : Bool
+}
+
+///|
 priv struct TableSpec {
   name : String
   columns : Array[Column]
   primary : Array[String]
-  unique : Array[Array[String]]
+  unique : Array[UniqueSpec]
   references : Array[Reference]
 }
 

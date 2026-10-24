@@ -1,5 +1,7 @@
 # 数据契约
 
+可空唯一键同时支持默认 NULLS DISTINCT 和显式 NULLS NOT DISTINCT，详见[唯一键契约](nullable-unique.md)。
+
 策略对象只接受 `tables`、`max_rows` 和 `max_input_units`。未知选项是错误，不是扩展槽。
 
 每张表指定 `name`、`columns`、非空 `primary`，可选 `unique` 和 `references`。一列指定 `name`、`type`、`rule`，以及可选 `nullable`（默认 false）、`max_length`（Unicode 标量数量，只适用于 text）。表、列和键内名称不得重复。

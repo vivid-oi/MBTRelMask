@@ -74,12 +74,17 @@ fn tuple_key(
   row : Array[Json],
   table : TableSpec,
   names : Array[String],
+  nulls_equal~ : Bool = false,
 ) -> String? raise MaskError {
   let parts : Array[Json] = []
   for name in names {
     let ci = column_index(table, name).unwrap()
     if row[ci] is Null {
-      return None
+      if !nulls_equal {
+        return None
+      }
+      parts.push(Json::null())
+      continue
     }
     parts.push(
       Json::string(
@@ -96,11 +101,12 @@ fn key_set(
   rows : Array[Array[Json]],
   names : Array[String],
   primary : Bool,
+  nulls_equal~ : Bool = false,
 ) -> Map[String, Bool] raise MaskError {
   let keys : Map[String, Bool] = Map([])
   for ri, row in rows {
     let loc = table.name + "[" + ri.to_string() + "]"
-    match tuple_key(row, table, names) {
+    match tuple_key(row, table, names, nulls_equal~) {
       None => if primary { reject("null_primary_key", loc) }
       Some(key) => {
         if keys.contains(key) {
@@ -118,7 +124,15 @@ fn validate_rows(plan : Plan, rows : Rows) -> Unit raise MaskError {
   for ti, table in plan.tables {
     ignore(key_set(table, rows[ti], table.primary, true))
     for key in table.unique {
-      ignore(key_set(table, rows[ti], key, false))
+      ignore(
+        key_set(
+          table,
+          rows[ti],
+          key.columns,
+          false,
+          nulls_equal=key.nulls_equal,
+        ),
+      )
     }
     for reference in table.references {
       let pi = table_index(plan.tables, reference.target).unwrap()

@@ -177,7 +177,24 @@ pub fn Plan::parse(source : String) -> Plan raise MaskError {
     let primary = names(required(obj, "primary", loc), loc)
     let unique = match obj.get("unique") {
       None => []
-      Some(x) => items(x, loc).map(x => names(x, loc))
+      Some(x) =>
+        items(x, loc).map(x => {
+          if x is Array(_) {
+            { columns: names(x, loc), nulls_equal: false, }
+          } else {
+            let u = fields(x, loc)
+            only_keys(u, ["columns", "nulls"], loc)
+            let nulls_equal = match u.get("nulls") {
+              None | Some(String("distinct")) => false
+              Some(String("not_distinct")) => true
+              _ => {
+                reject("unsupported_unique_nulls", loc)
+                false
+              }
+            }
+            { columns: names(required(u, "columns", loc), loc), nulls_equal, }
+          }
+        })
     }
     let references = match obj.get("references") {
       None => []
@@ -209,7 +226,7 @@ pub fn Plan::parse(source : String) -> Plan raise MaskError {
     let table = { name, columns, primary, unique, references, }
     check_names(table, primary, loc)
     for u in unique {
-      check_names(table, u, loc)
+      check_names(table, u.columns, loc)
     }
     tables.push(table)
   }
@@ -238,7 +255,7 @@ pub fn Plan::parse(source : String) -> Plan raise MaskError {
       let parent = tables[ti]
       check_names(parent, reference.target_columns, loc)
       if reference.target_columns != parent.primary &&
-        !parent.unique.contains(reference.target_columns) {
+        !parent.unique.any(u => u.columns == reference.target_columns) {
         reject("reference_not_unique", loc)
       }
       for position, name in reference.columns {
