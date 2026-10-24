@@ -2,6 +2,7 @@
 
 | Resource | Use | License / source |
 | --- | --- | --- |
+| RFC 3339 | Date/time component format reference for a documented strict subset; Gregorian arithmetic and fixtures written here | No implementation or example text copied; https://www.rfc-editor.org/rfc/rfc3339 |
 | MoonBit core | JSON parser with duplicate rejection and preserved number representations; collections and UTF-8 | Apache-2.0, https://github.com/moonbitlang/core |
 | moonbitlang/async 0.22.5 | Native/moonrun file I/O, runtime exit import binding and development command execution | Apache-2.0, https://github.com/moonbitlang/async |
 | Chinook | Complete public example dataset; unchanged source file and retained license | MIT, commit `7f67772503d71ba90f19283c38e93923addb43fa`, https://github.com/lerocha/chinook-database |

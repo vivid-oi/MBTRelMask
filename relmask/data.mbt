@@ -35,6 +35,9 @@ fn check_cell(
     (Boolean, True | False) => ()
     _ => reject("type_mismatch", location)
   }
+  if column.rule is ShiftDays(_) && value is String(s) {
+    ignore(shift_date(s, 0, location))
+  }
 }
 
 ///|

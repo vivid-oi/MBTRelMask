@@ -76,6 +76,8 @@ Chinook 示例保留全部 11 张表，重编号关联整数 ID，替换客户/�
 
 ## 验证
 
+需要扰动生日、入职或交易日期时，可对 text 列使用 shift_days 规则，保留天数间隔与时间后缀；具体格式及边界见[日期契约](docs/dates.md)。
+
 ```sh
 moon fmt --check
 moon info

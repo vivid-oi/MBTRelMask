@@ -38,6 +38,7 @@ priv enum Rule {
   Replace(String)
   Token(String, String, String)
   Reindex(Int64)
+  ShiftDays(Int32)
 }
 
 ///|

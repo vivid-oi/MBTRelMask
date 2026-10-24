@@ -40,6 +40,14 @@ fn read_rule(
     guard kind is Integer else { reject("integer_rule_type", location) }
     return Reindex(integer(item, location))
   }
+  if value.get("shift_days") is Some(item) {
+    guard kind is Text else { reject("text_rule_type", location) }
+    let days = integer(item, location)
+    if days < -3652058L || days > 3652058L {
+      reject("date_shift_range", location)
+    }
+    return ShiftDays(days.to_int())
+  }
   reject("unsupported_rule", location)
   abort("unreachable")
 }
@@ -128,6 +136,7 @@ fn same_rule(a : Rule, b : Rule) -> Bool {
     (Keep, Keep) => true
     (Token(x, xp, xs), Token(y, yp, ys)) => x == y && xp == yp && xs == ys
     (Reindex(x), Reindex(y)) => x == y
+    (ShiftDays(x), ShiftDays(y)) => x == y
     _ => false
   }
 }

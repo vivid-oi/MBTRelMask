@@ -14,7 +14,7 @@ async fn main {
   if !["wasm","wasm-gc","js","native"].contains(target) { fail("unsupported verification target") }
   let moon = if args.length() > 2 { args[2] } else { "moon" }
   @shell.Cmd(moon, ["fmt","--check"]).run()
-  @shell.Cmd(moon, ["fmt","--check","dev/verify.mbtx","dev/chinook_policy.mbtx","dev/bundle_workflow.mbtx","dev/subset_workflow.mbtx","dev/csv_workflow.mbtx","dev/state_workflow.mbtx"]).run()
+  @shell.Cmd(moon, ["fmt","--check","dev/verify.mbtx","dev/chinook_policy.mbtx","dev/bundle_workflow.mbtx","dev/subset_workflow.mbtx","dev/csv_workflow.mbtx","dev/state_workflow.mbtx","dev/dates_workflow.mbtx"]).run()
   @shell.Cmd(moon, ["info","--target",target]).run()
   @shell.Cmd("git", ["diff","--exit-code","--","*.mbti"]).run()
   @shell.Cmd(moon, ["check","--frozen","--target",target,"--deny-warn"]).run()
@@ -67,5 +67,6 @@ async fn main {
     @shell.Cmd(moon, ["run","--frozen","dev/subset_workflow.mbtx","--",target,moon]).run()
     @shell.Cmd(moon, ["run","--frozen","dev/csv_workflow.mbtx","--",target,moon]).run()
     @shell.Cmd(moon, ["run","--frozen","dev/state_workflow.mbtx","--",target,moon]).run()
+    @shell.Cmd(moon, ["run","--frozen","dev/dates_workflow.mbtx","--",target,moon]).run()
   }
 }

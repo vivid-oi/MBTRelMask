@@ -1,5 +1,7 @@
 # 数据契约
 
+text 的 shift_days 规则严格验证日期/时间文本，细则见[日期契约](dates.md)。
+
 可空唯一键同时支持默认 NULLS DISTINCT 和显式 NULLS NOT DISTINCT，详见[唯一键契约](nullable-unique.md)。
 
 策略对象只接受 `tables`、`max_rows` 和 `max_input_units`。未知选项是错误，不是扩展槽。

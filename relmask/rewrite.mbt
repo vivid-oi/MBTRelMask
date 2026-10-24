@@ -120,6 +120,7 @@ fn Plan::rewrite_rows(
           Keep => old
           Clear => Json::null()
           Replace(s) => Json::string(s)
+          ShiftDays(days) => Json::string(shift_date(text(old, loc), days, loc))
           Token(domain, prefix, suffix) => {
             let original = text(old, loc)
             let token = prefix + pseudonym(secret, domain, original) + suffix

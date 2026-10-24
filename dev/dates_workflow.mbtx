@@ -1,0 +1,59 @@
+----
+import {
+  "moonbitlang/async",
+  "moonbitlang/async/shell",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+async fn main {
+  let args = @env.args()
+  let target = if args.length() > 1 { args[1] } else { "wasm" }
+  let moon = if args.length() > 2 { args[2] } else { "moon" }
+  let directory = @fs.tmpdir(prefix="relmask-dates-")
+  defer {
+    for name in @fs.readdir(directory[:]) { let path = directory + "/" + name; @fs.remove(path[:]) }
+    @fs.rmdir(directory[:])
+  }
+  let policy = @json.parse(@fs.read_file("examples/chinook/policy.json").text(),preserve_number_repr=true)
+  guard policy is {"tables":Array(tables),..} else { fail("policy shape") }
+  let fields = ["BirthDate","HireDate","InvoiceDate"]
+  for table in tables {
+    guard table is {"columns":Array(columns),..} else { fail("column shape") }
+    for column in columns {
+      guard column is Object(value) && value.get("name") is Some(String(name)) else { fail("column name") }
+      if fields.contains(name) { value["rule"] = @json.parse("{\"shift_days\":365}",preserve_number_repr=true) }
+    }
+  }
+  let policy_path = directory + "/policy.json"
+  let bundle_path = directory + "/dates.bundle.json"
+  @fs.write_file(policy_path[:],policy.stringify())
+  let prefix = ["run","--frozen","--target",target,"apps/relmask","--"]
+  @shell.Cmd(moon,prefix + ["export",policy_path,"examples/chinook/data.json",bundle_path],env={"RELMASK_KEY":"public-example-key-never-use-for-private-data"},stderr=Discard).run()
+  guard @json.parse(@fs.read_file(bundle_path[:]).text()) is {"data":String(encoded),..} else { fail("bundle shape") }
+  guard @json.parse(encoded,preserve_number_repr=true) is Object(after) && @json.parse(@fs.read_file("examples/chinook/data.json").text(),preserve_number_repr=true) is Object(before) else { fail("dataset shape") }
+  let mut changed = 0
+  for name, table in before {
+    guard table is Array(old) && after.get(name) is Some(Array(new)) else { fail("missing table") }
+    if old.length() != new.length() { fail("row loss") }
+    for i, row in old {
+      guard row is Object(a) && new[i] is Object(b) else { fail("row shape") }
+      for field in fields {
+        if a.get(field) is Some(String(date)) {
+          guard b.get(field) is Some(String(shifted)) else { fail("date loss") }
+          if shifted == date || shifted[10:] != date[10:] { fail("date suffix changed") }
+          changed += 1
+        }
+      }
+      for field in ["UnitPrice","Total","Quantity"] {
+        if a.get(field) is Some(value) && b.get(field) is Some(actual) && value.stringify() != actual.stringify() { fail("business value changed") }
+      }
+    }
+  }
+  guard after.get("Employee") is Some(Array([{"BirthDate":String(birth),..},..])) else { fail("employee missing") }
+  if birth != "1963-02-18T00:00:00" || changed != 428 { fail("known date shift mismatch") }
+  @shell.Cmd(moon,prefix + ["verify",policy_path,bundle_path],stdout=Discard).run()
+  println("Date workflow: 428 real Chinook dates shifted by 365 days; suffixes, row counts, money and constraints preserved")
+}
